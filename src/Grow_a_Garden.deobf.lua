@@ -551,6 +551,48 @@ local function DumpRemotesAndAttributes(root)
     return out
 end
 
+-- ========== Egg ESP Helper ==========
+local function ShowEggESP(egg, player, api)
+    pcall(function()
+        if not egg then return end
+        local owner = Utils.getAttributeSafe(egg, "OWNER") or Utils.getAttributeSafe(egg, "Owner")
+        if owner and owner ~= player.Name then return end
+
+        -- Try discover content and timer
+        local content = Utils.getAttributeSafe(egg, "Content") or Utils.getAttributeSafe(egg, "CONTENT") or Utils.getAttributeSafe(egg, "Type") or Utils.getAttributeSafe(egg, "PET_TYPE")
+        if not content then
+            local child = egg:FindFirstChild("Content") or egg:FindFirstChild("content") or egg:FindFirstChild("Type") or egg:FindFirstChild("PET_TYPE")
+            if child and child:IsA("StringValue") then content = child.Value end
+        end
+
+        local timer = Utils.getAttributeSafe(egg, "TimeToHatch") or Utils.getAttributeSafe(egg, "TimeToReady") or Utils.getAttributeSafe(egg, "TIME_TO_READY") or Utils.getAttributeSafe(egg, "TimeToPatch")
+        if not timer then
+            local tchild = egg:FindFirstChild("Timer") or egg:FindFirstChild("timer") or egg:FindFirstChild("Hatch_Timer")
+            if tchild and tchild:IsA("NumberValue") then timer = tchild.Value end
+        end
+
+        local ready = Utils.getAttributeSafe(egg, "READY") or egg:FindFirstChild("Ready") and true or false
+
+        local labelText = tostring(egg.Name or "Egg")
+        if ready then
+            labelText = (content and ("READY: " .. tostring(content)) or "READY")
+        elseif type(timer) == "number" then
+            labelText = string.format("⏳ %ds%s", math.ceil(timer), content and (" | " .. tostring(content)) or "")
+        else
+            labelText = content and tostring(content) or tostring(egg.Name or "Egg")
+        end
+
+        if not egg:FindFirstChild("EggESP") then
+            local bb = ESP.createForInstance(egg.PrimaryPart or egg:FindFirstChildWhichIsA("BasePart") or egg, { Name = "EggESP", Text = labelText, TextScaled = true, TextColor = Color3.fromRGB(255, 200, 0) })
+            if bb then bb.Parent = egg end
+        else
+            local bb = egg:FindFirstChild("EggESP")
+            ESP.updateLabel(bb, labelText)
+        end
+    end)
+end
+
+
 local function auditRemotes()
     local results = {}
     for k,v in pairs(Remotes) do
@@ -585,6 +627,18 @@ function Deobf.runCycle(player, config, api, helpers)
     end
     local effectiveLuck = Helpers.GetEffectiveLuck(config)
     UpdatePlayerPetsDisplay(player, api, effectiveLuck)
+    -- Egg ESP: scan common egg roots and show per-egg label for owned eggs
+    pcall(function()
+        local workspace = game:GetService("Workspace")
+        local eggRoots = { World.getPath("PhysicalEggs"), World.getPath("PhysicalEggsShop"), World.getPath("Objects_Physical"), workspace:FindFirstChild("PhysicalEggs") }
+        for _, er in ipairs(eggRoots) do
+            if er and er:IsA("Instance") then
+                for _, egg in ipairs(er:GetChildren()) do
+                    pcall(function() ShowEggESP(egg, player, api) end)
+                end
+            end
+        end
+    end)
     F(player, config, api)
     u(player, config, helpers)
     if config and config["Auto Favorite Backpack"] then S(player) end
