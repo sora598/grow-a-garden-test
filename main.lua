@@ -615,12 +615,16 @@ local function _createESP(egg)
     text.Name = "TextLabel"
     text.Size = UDim2.fromScale(1, 1)
     text.BackgroundTransparency = 1
-    text.TextScaled = true
+    text.TextScaled = false
     text.Font = Enum.Font.GothamBold
     text.TextStrokeTransparency = 0
     text.TextColor3 = EggESP.TIMER_COLOR
+    text.TextSize = 14
     text.Text = "Loading..."
     text.Parent = billboard
+
+    -- make billboard readable only within a certain range
+    pcall(function() billboard.MaxDistance = 300 end)
 
     return text
 end
@@ -634,47 +638,53 @@ local function _updateESPForEgg(egg)
     if not label then label = _createESP(egg) end
     if not label then return end
 
-    -- Prefer attribute-based reporting when available
-    local ready = egg:GetAttribute("READY") or egg:GetAttribute("IsReady") or egg:GetAttribute("Ready")
-    local timeLeft = egg:GetAttribute("TimeToHatch") or egg:GetAttribute("TimeLeft") or egg:GetAttribute("Timer")
+    -- Use getEggInfo once to gather timer/content/position
+    local ok, info = pcall(function() return EggSystem.getEggInfo(egg) end)
+    info = (ok and info) and info or {}
+    local contentText = info.content or egg:GetAttribute("EggName") or egg:GetAttribute("OBJECT_TYPE") or egg:GetAttribute("PetType")
+    if not contentText then
+        local childModel = egg:FindFirstChildWhichIsA("Model") or egg:FindFirstChildWhichIsA("Folder")
+        if childModel and childModel.Name and not childModel.Name:lower():find("egg") then contentText = childModel.Name end
+    end
+
+    local ready = egg:GetAttribute("READY") or egg:GetAttribute("IsReady") or egg:GetAttribute("Ready") or (info and info.timerValue and info.timerValue <= 0)
+    local timerVal = (info and info.timerValue) or egg:GetAttribute("TimeToHatch") or egg:GetAttribute("TimeLeft") or egg:GetAttribute("Timer")
 
     if ready then
-        label.Text = "READY"
+        if contentText then
+            label.Text = "READY: " .. tostring(contentText)
+        else
+            label.Text = "READY"
+        end
         label.TextColor3 = EggESP.READY_COLOR
-    elseif type(timeLeft) == "number" and timeLeft > 0 then
-        label.Text = string.format("⏳ %ds", math.ceil(timeLeft))
+    elseif type(timerVal) == "number" and timerVal > 0 then
+        if contentText then
+            label.Text = string.format("⏳ %ds | %s", math.ceil(timerVal), tostring(contentText))
+        else
+            label.Text = string.format("⏳ %ds", math.ceil(timerVal))
+        end
         label.TextColor3 = EggESP.TIMER_COLOR
     else
-        -- Fallback to EggSystem.getEggInfo for timers/content
-        local ok, info = pcall(function() return EggSystem.getEggInfo(egg) end)
-        if ok and info and info.timerValue and type(info.timerValue) == "number" then
-            if info.timerValue <= 0 then
-                label.Text = "READY"
-                label.TextColor3 = EggESP.READY_COLOR
-            else
-                label.Text = string.format("⏳ %ds", math.ceil(info.timerValue))
-                label.TextColor3 = EggESP.TIMER_COLOR
+        if contentText then
+            label.Text = tostring(contentText)
+        else
+            label.Text = "..."
+        end
+        label.TextColor3 = EggESP.TIMER_COLOR
+    end
+
+    -- Adjust label size by distance to player
+    do
+        local successPos, pos = pcall(function() return info and info.position end)
+        if successPos and pos and player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = player.Character.HumanoidRootPart
+            local succ, dist = pcall(function() return (hrp.Position - pos).Magnitude end)
+            if succ and type(dist) == "number" then
+                local size = math.floor(math.clamp(24 - dist * 0.06, 10, 24))
+                pcall(function() label.TextSize = size end)
             end
         else
-            local ok2, info = pcall(function() return EggSystem.getEggInfo(egg) end)
-            if ok2 and info then
-                local contentText = info.content and tostring(info.content) or nil
-                if info.timerValue and type(info.timerValue) == "number" then
-                    if info.timerValue <= 0 then
-                        label.Text = contentText and ("READY: " .. contentText) or "READY"
-                        label.TextColor3 = EggESP.READY_COLOR
-                    else
-                        label.Text = contentText and (string.format("⏳ %ds | %s", math.ceil(info.timerValue), contentText)) or string.format("⏳ %ds", math.ceil(info.timerValue))
-                        label.TextColor3 = EggESP.TIMER_COLOR
-                    end
-                else
-                    label.Text = contentText or "..."
-                    label.TextColor3 = EggESP.TIMER_COLOR
-                end
-            else
-                label.Text = "..."
-                label.TextColor3 = EggESP.TIMER_COLOR
-            end
+            pcall(function() label.TextSize = 14 end)
         end
     end
 end
