@@ -107,11 +107,11 @@ pcall(function()
     end
 end)
 
--- Main Frame
+-- Main Frame (smaller, more compact)
 local main = Instance.new("Frame")
 main.Name = "MainFrame"
-main.Size = UDim2.new(0, 420, 0, 500)
-main.Position = UDim2.new(0.5, -210, 0.5, -250)
+main.Size = UDim2.new(0, 300, 0, 380)  -- Reduced from 420x500
+main.Position = UDim2.new(0.5, -150, 0.85, -190)  -- Lower on screen
 main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 main.BorderSizePixel = 0
 main.Active = true
@@ -173,14 +173,14 @@ local closeCorner = Instance.new("UICorner")
 closeCorner.CornerRadius = UDim.new(0, 4)
 closeCorner.Parent = closeBtn
 
--- Content container
+-- Content container (adjusted for smaller window)
 local content = Instance.new("ScrollingFrame")
-content.Size = UDim2.new(1, -20, 1, -50)
-content.Position = UDim2.new(0, 10, 0, 45)
+content.Size = UDim2.new(1, -15, 1, -50)
+content.Position = UDim2.new(0, 8, 0, 45)
 content.BackgroundTransparency = 1
 content.BorderSizePixel = 0
-content.ScrollBarThickness = 6
-content.CanvasSize = UDim2.new(0, 0, 0, 700)
+content.ScrollBarThickness = 4
+content.CanvasSize = UDim2.new(0, 0, 0, 600)
 content.Parent = main
 
 local contentLayout = Instance.new("UIListLayout")
@@ -191,7 +191,7 @@ contentLayout.Parent = content
 -- ========== HELPER FUNCTIONS ==========
 local function createSection(name, order)
     local section = Instance.new("Frame")
-    section.Size = UDim2.new(1, 0, 0, 30)
+    section.Size = UDim2.new(1, 0, 0, 25)  -- Reduced from 30
     section.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     section.BorderSizePixel = 0
     section.LayoutOrder = order
@@ -202,13 +202,13 @@ local function createSection(name, order)
     sectionCorner.Parent = section
     
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -20, 1, 0)
-    label.Position = UDim2.new(0, 10, 0, 0)
+    label.Size = UDim2.new(1, -15, 1, 0)
+    label.Position = UDim2.new(0, 8, 0, 0)
     label.BackgroundTransparency = 1
     label.Text = name
     label.TextColor3 = Color3.fromRGB(100, 200, 255)
     label.Font = Enum.Font.GothamBold
-    label.TextSize = 14
+    label.TextSize = 12  -- Reduced from 14
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = section
     
@@ -217,7 +217,7 @@ end
 
 local function createToggle(name, configKey, defaultValue, order)
     local toggle = Instance.new("Frame")
-    toggle.Size = UDim2.new(1, 0, 0, 35)
+    toggle.Size = UDim2.new(1, 0, 0, 30)  -- Reduced from 35
     toggle.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     toggle.BorderSizePixel = 0
     toggle.LayoutOrder = order
@@ -228,24 +228,24 @@ local function createToggle(name, configKey, defaultValue, order)
     toggleCorner.Parent = toggle
     
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -70, 1, 0)
-    label.Position = UDim2.new(0, 10, 0, 0)
+    label.Size = UDim2.new(1, -60, 1, 0)
+    label.Position = UDim2.new(0, 8, 0, 0)
     label.BackgroundTransparency = 1
     label.Text = name
     label.TextColor3 = Color3.fromRGB(220, 220, 220)
     label.Font = Enum.Font.Gotham
-    label.TextSize = 13
+    label.TextSize = 11  -- Reduced from 13
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = toggle
     
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 50, 0, 25)
-    btn.Position = UDim2.new(1, -60, 0.5, -12.5)
+    btn.Size = UDim2.new(0, 45, 0, 22)  -- Slightly smaller
+    btn.Position = UDim2.new(1, -52, 0.5, -11)
     btn.BackgroundColor3 = defaultValue and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(100, 100, 100)
     btn.Text = defaultValue and "ON" or "OFF"
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 12
+    btn.TextSize = 11
     btn.Parent = toggle
     
     local btnCorner = Instance.new("UICorner")
@@ -263,7 +263,7 @@ end
 
 local function createSlider(name, configKey, min, max, defaultValue, suffix, order)
     local slider = Instance.new("Frame")
-    slider.Size = UDim2.new(1, 0, 0, 50)
+    slider.Size = UDim2.new(1, 0, 0, 42)  -- Reduced from 50
     slider.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     slider.BorderSizePixel = 0
     slider.LayoutOrder = order
@@ -274,36 +274,36 @@ local function createSlider(name, configKey, min, max, defaultValue, suffix, ord
     sliderCorner.Parent = slider
     
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -100, 0, 20)
-    label.Position = UDim2.new(0, 10, 0, 5)
+    label.Size = UDim2.new(1, -80, 0, 16)
+    label.Position = UDim2.new(0, 8, 0, 4)
     label.BackgroundTransparency = 1
     label.Text = name
     label.TextColor3 = Color3.fromRGB(220, 220, 220)
     label.Font = Enum.Font.Gotham
-    label.TextSize = 13
+    label.TextSize = 11
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = slider
     
     local valueLabel = Instance.new("TextLabel")
-    valueLabel.Size = UDim2.new(0, 80, 0, 20)
-    valueLabel.Position = UDim2.new(1, -90, 0, 5)
+    valueLabel.Size = UDim2.new(0, 70, 0, 16)
+    valueLabel.Position = UDim2.new(1, -78, 0, 4)
     valueLabel.BackgroundTransparency = 1
     valueLabel.Text = tostring(defaultValue) .. suffix
     valueLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
     valueLabel.Font = Enum.Font.GothamBold
-    valueLabel.TextSize = 13
+    valueLabel.TextSize = 11
     valueLabel.TextXAlignment = Enum.TextXAlignment.Right
     valueLabel.Parent = slider
     
     local sliderBar = Instance.new("Frame")
-    sliderBar.Size = UDim2.new(1, -20, 0, 8)
-    sliderBar.Position = UDim2.new(0, 10, 1, -18)
+    sliderBar.Size = UDim2.new(1, -16, 0, 6)
+    sliderBar.Position = UDim2.new(0, 8, 1, -14)
     sliderBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     sliderBar.BorderSizePixel = 0
     sliderBar.Parent = slider
     
     local barCorner = Instance.new("UICorner")
-    barCorner.CornerRadius = UDim.new(0, 4)
+    barCorner.CornerRadius = UDim.new(0, 3)
     barCorner.Parent = sliderBar
     
     local fill = Instance.new("Frame")
@@ -313,7 +313,7 @@ local function createSlider(name, configKey, min, max, defaultValue, suffix, ord
     fill.Parent = sliderBar
     
     local fillCorner = Instance.new("UICorner")
-    fillCorner.CornerRadius = UDim.new(0, 4)
+    fillCorner.CornerRadius = UDim.new(0, 3)
     fillCorner.Parent = fill
     
     local dragging = false
@@ -353,7 +353,7 @@ end
 
 local function createStatusBox(order)
     local status = Instance.new("Frame")
-    status.Size = UDim2.new(1, 0, 0, 100)
+    status.Size = UDim2.new(1, 0, 0, 85)  -- Reduced from 100
     status.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     status.BorderSizePixel = 0
     status.LayoutOrder = order
@@ -365,13 +365,13 @@ local function createStatusBox(order)
     
     local statusLabel = Instance.new("TextLabel")
     statusLabel.Name = "StatusLabel"
-    statusLabel.Size = UDim2.new(1, -20, 1, -10)
-    statusLabel.Position = UDim2.new(0, 10, 0, 5)
+    statusLabel.Size = UDim2.new(1, -15, 1, -8)
+    statusLabel.Position = UDim2.new(0, 8, 0, 4)
     statusLabel.BackgroundTransparency = 1
     statusLabel.Text = "Status: Idle\nLuck: 0.00%\nItems: 0 | Watered: 0\nUptime: 0s"
     statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
     statusLabel.Font = Enum.Font.Code
-    statusLabel.TextSize = 12
+    statusLabel.TextSize = 10  -- Reduced from 12
     statusLabel.TextXAlignment = Enum.TextXAlignment.Left
     statusLabel.TextYAlignment = Enum.TextYAlignment.Top
     statusLabel.Parent = status
@@ -382,12 +382,12 @@ end
 local function createStartButton(order)
     local btn = Instance.new("TextButton")
     btn.Name = "StartButton"
-    btn.Size = UDim2.new(1, 0, 0, 45)
+    btn.Size = UDim2.new(1, 0, 0, 38)  -- Reduced from 45
     btn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
     btn.Text = "▶ START"
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 16
+    btn.TextSize = 14  -- Reduced from 16
     btn.LayoutOrder = order
     btn.Parent = content
     
