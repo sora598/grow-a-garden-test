@@ -578,8 +578,11 @@ Deobf.GetEffectiveLuck = Helpers.GetEffectiveLuck
 
 function Deobf.runCycle(player, config, api, helpers)
     -- Keep sequence: show objects, update pets, water, collect, favorite, cook
+    -- Skip ESP for objects if DataClient is not available (not part of our module)
     local ok, root = pcall(function() return World.getPath("Objects_Physical") end)
-    if ok and root then I(root, player, api and api.DataClient) end
+    if ok and root and api and api.DataClient then 
+        I(root, player, api.DataClient) 
+    end
     local effectiveLuck = Helpers.GetEffectiveLuck(config)
     UpdatePlayerPetsDisplay(player, api, effectiveLuck)
     F(player, config, api)
