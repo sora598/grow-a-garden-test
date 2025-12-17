@@ -6,8 +6,16 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
--- Load module
-local Deobf = loadstring(game:HttpGet("https://raw.githubusercontent.com/sora598/grow-a-garden-test/main/src/Grow_a_Garden.deobf.lua"))()
+-- Load module with error handling
+local Deobf
+local loadSuccess, loadError = pcall(function()
+    Deobf = loadstring(game:HttpGet("https://raw.githubusercontent.com/sora598/grow-a-garden-test/main/src/Grow_a_Garden.deobf.lua"))()
+end)
+
+if not loadSuccess or not Deobf then
+    error("Failed to load module: " .. tostring(loadError))
+    return
+end
 
 print("✓ Module loaded!")
 

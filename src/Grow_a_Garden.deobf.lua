@@ -45,7 +45,7 @@ local math = math
 
 -- Optional luck boost module (if available)
 local LuckBoost = nil
-pcall(function() LuckBoost = require("luck_boost") end)
+-- Note: require() doesn't work in Roblox executors, using fallback only
 
 -- ========== Utilities ==========
 local Utils = {}
