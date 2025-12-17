@@ -66,6 +66,66 @@ local State = {
 -- ========== EGG DETECTION & CHECKING ==========
 local EggSystem = {}
 
+-- Determine if an egg belongs to the local player (returns true/false/nil if unknown)
+function EggSystem.isOwnedByPlayer(egg, playerRef)
+    if not egg then return nil end
+    local p = playerRef or player
+    local uname = p and p.Name or nil
+    local uid = p and p.UserId or nil
+
+    local function matches(val)
+        if val == nil then return nil end
+        if typeof(val) == "string" then
+            return val == uname and true or (val ~= uname and false or nil)
+        elseif typeof(val) == "number" then
+            return uid and val == uid and true or (uid and val ~= uid and false or nil)
+        end
+        return nil
+    end
+
+    -- Check attributes on egg
+    for k, v in pairs(egg:GetAttributes()) do
+        local key = k:lower()
+        if key == "owner" or key == "player" or key == "owner_name" or key == "playername" or key == "userid" or key == "user_id" then
+            local m = matches(v)
+            if m ~= nil then return m end
+        end
+    end
+
+    -- Check children ValueBase/StringValue nodes that may store owner
+    for _, child in pairs(egg:GetChildren()) do
+        local key = child.Name:lower()
+        if child:IsA("StringValue") or child:IsA("NumberValue") then
+            if key == "owner" or key == "player" or key == "owner_name" or key == "playername" or key == "userid" or key == "user_id" then
+                local m = matches(child.Value)
+                if m ~= nil then return m end
+            end
+        end
+    end
+
+    -- Check parent attributes/values as a fallback (some games store ownership on the container)
+    if egg.Parent then
+        for k, v in pairs(egg.Parent:GetAttributes()) do
+            local key = k:lower()
+            if key == "owner" or key == "player" or key == "owner_name" or key == "playername" or key == "userid" or key == "user_id" then
+                local m = matches(v)
+                if m ~= nil then return m end
+            end
+        end
+        for _, child in pairs(egg.Parent:GetChildren()) do
+            local key = child.Name:lower()
+            if child:IsA("StringValue") or child:IsA("NumberValue") then
+                if key == "owner" or key == "player" or key == "owner_name" or key == "playername" or key == "userid" or key == "user_id" then
+                    local m = matches(child.Value)
+                    if m ~= nil then return m end
+                end
+            end
+        end
+    end
+
+    return nil -- unknown ownership
+end
+
 function EggSystem.findEggs(maxEggs)
     maxEggs = maxEggs or 20  -- Limit to 20 eggs by default for performance
     local eggs = {}
@@ -90,7 +150,12 @@ function EggSystem.findEggs(maxEggs)
 
             -- Look for objects named "egg" or that contain a Timer child
             if name:match("egg") or obj:FindFirstChild("Timer") or obj:FindFirstChild("timer") then
-                table.insert(eggs, obj)
+                local owned = EggSystem.isOwnedByPlayer(obj, player)
+                if owned == false then
+                    -- Skip eggs that belong to other players when we can tell
+                else
+                    table.insert(eggs, obj)
+                end
             end
 
             if obj:IsA("Model") or obj:IsA("Folder") then
