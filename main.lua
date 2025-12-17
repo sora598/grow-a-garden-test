@@ -29,6 +29,7 @@ local Config = {
     ["Auto Collect"] = false,
     ["Auto Water"] = false,
     ["Auto Favorite"] = false,
+    ["ESP Enabled"] = true,
 }
 
 -- Load utils
@@ -151,9 +152,20 @@ function EggSystem.findEggs(maxEggs)
             -- Look for objects named "egg" or that contain a Timer child
             if name:match("egg") or obj:FindFirstChild("Timer") or obj:FindFirstChild("timer") then
                 local owned = EggSystem.isOwnedByPlayer(obj, player)
-                if owned == false then
-                    -- Skip eggs that belong to other players when we can tell
-                else
+
+                -- If ownership is unknown, try a proximity heuristic to the local player
+                if owned == nil then
+                    local ok, info = pcall(function() return EggSystem.getEggInfo(obj) end)
+                    if ok and info and info.position and player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        local hrp = player.Character.HumanoidRootPart
+                        local success, dist = pcall(function() return (hrp.Position - info.position).Magnitude end)
+                        if success and dist and type(dist) == "number" and dist <= 80 then
+                            owned = true
+                        end
+                    end
+                end
+
+                if owned == true then
                     table.insert(eggs, obj)
                 end
             end
@@ -205,13 +217,27 @@ function EggSystem.getEggInfo(egg)
     end
 
     -- Try to find timer (check egg itself first, then parent)
-    local timer = egg:FindFirstChild("Timer") or egg:FindFirstChild("timer") or egg:FindFirstChild("Hatch_Timer")
-    
-    -- If not found on egg, check parent folder
+    -- Helper: recursive descendant search by name list
+    local function _findDescendantByNames(root, names, maxDepth, depth)
+        depth = depth or 0
+        maxDepth = maxDepth or 4
+        if not root or depth > maxDepth then return nil end
+        for _, n in ipairs(names) do
+            local f = root:FindFirstChild(n)
+            if f then return f end
+        end
+        for _, c in pairs(root:GetChildren()) do
+            local r = _findDescendantByNames(c, names, maxDepth, depth + 1)
+            if r then return r end
+        end
+        return nil
+    end
+
+    local timerNames = {"Timer", "timer", "Hatch_Timer", "HatchTimer", "TimerValue"}
+    local timer = _findDescendantByNames(egg, timerNames, 4)
     if not timer and egg.Parent then
-        local parent = egg.Parent
-        timer = parent:FindFirstChild("Timer") or parent:FindFirstChild("timer") or parent:FindFirstChild("Hatch_Timer")
-        if timer then info.parentInfo = parent.Name end
+        timer = _findDescendantByNames(egg.Parent, timerNames, 3)
+        if timer then info.parentInfo = egg.Parent.Name end
     end
     
     if timer then
@@ -229,12 +255,12 @@ function EggSystem.getEggInfo(egg)
         end
     end
 
-    -- Try to find content/type (check egg itself first, then parent)
-    local content = egg:FindFirstChild("Content") or egg:FindFirstChild("content") or egg:FindFirstChild("Type") or egg:FindFirstChild("type")
-    
+    -- Try to find content/type (search descendants on egg then parent)
+    local contentNames = {"Content", "content", "Type", "type", "EggType", "ItemType"}
+    local content = _findDescendantByNames(egg, contentNames, 4)
     if not content and egg.Parent then
-        local parent = egg.Parent
-        content = parent:FindFirstChild("Content") or parent:FindFirstChild("content") or parent:FindFirstChild("Type") or parent:FindFirstChild("type")
+        content = _findDescendantByNames(egg.Parent, contentNames, 3)
+        if content and not info.parentInfo then info.parentInfo = egg.Parent.Name end
     end
     
     if content then
@@ -356,6 +382,132 @@ function EggSystem.dumpEggStructure()
         dump(egg.Parent, 0, 3)
     end
 end
+
+-- ========== SIMPLE EGG ESP ==========
+local EggESP = {}
+EggESP.UPDATE_INTERVAL = 2
+EggESP.READY_COLOR = Color3.fromRGB(0, 255, 0)
+EggESP.TIMER_COLOR = Color3.fromRGB(255, 200, 0)
+
+local function _createESP(egg)
+    if not egg or not egg:IsA("Instance") then return nil end
+    if egg:FindFirstChild("EggESP") then return egg:FindFirstChild("EggESP").Billboard.TextLabel end
+
+    local adornee = nil
+    if egg:IsA("BasePart") then adornee = egg elseif egg:IsA("Model") then adornee = egg.PrimaryPart or egg:FindFirstChildWhichIsA("BasePart") end
+    if not adornee then return nil end
+
+    local folder = Instance.new("Folder")
+    folder.Name = "EggESP"
+    folder.Parent = egg
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "Billboard"
+    billboard.Adornee = adornee
+    billboard.Size = UDim2.new(0, 140, 0, 40)
+    billboard.StudsOffset = Vector3.new(0, 2, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = folder
+
+    local text = Instance.new("TextLabel")
+    text.Name = "TextLabel"
+    text.Size = UDim2.fromScale(1, 1)
+    text.BackgroundTransparency = 1
+    text.TextScaled = true
+    text.Font = Enum.Font.GothamBold
+    text.TextStrokeTransparency = 0
+    text.TextColor3 = EggESP.TIMER_COLOR
+    text.Text = "Loading..."
+    text.Parent = billboard
+
+    return text
+end
+
+local function _updateESPForEgg(egg)
+    if not egg then return end
+    local label = nil
+    if egg:FindFirstChild("EggESP") and egg.EggESP:FindFirstChild("Billboard") then
+        label = egg.EggESP.Billboard:FindFirstChild("TextLabel")
+    end
+    if not label then label = _createESP(egg) end
+    if not label then return end
+
+    -- Prefer attribute-based reporting when available
+    local ready = egg:GetAttribute("READY") or egg:GetAttribute("IsReady") or egg:GetAttribute("Ready")
+    local timeLeft = egg:GetAttribute("TimeToHatch") or egg:GetAttribute("TimeLeft") or egg:GetAttribute("Timer")
+
+    if ready then
+        label.Text = "READY"
+        label.TextColor3 = EggESP.READY_COLOR
+    elseif type(timeLeft) == "number" and timeLeft > 0 then
+        label.Text = string.format("⏳ %ds", math.ceil(timeLeft))
+        label.TextColor3 = EggESP.TIMER_COLOR
+    else
+        -- Fallback to EggSystem.getEggInfo for timers/content
+        local ok, info = pcall(function() return EggSystem.getEggInfo(egg) end)
+        if ok and info and info.timerValue and type(info.timerValue) == "number" then
+            if info.timerValue <= 0 then
+                label.Text = "READY"
+                label.TextColor3 = EggESP.READY_COLOR
+            else
+                label.Text = string.format("⏳ %ds", math.ceil(info.timerValue))
+                label.TextColor3 = EggESP.TIMER_COLOR
+            end
+        else
+            label.Text = info and (info.content and tostring(info.content) or "...") or "..."
+            label.TextColor3 = EggESP.TIMER_COLOR
+        end
+    end
+end
+
+local function _scanAndUpdateESP()
+    local eggs = {}
+
+    -- Prefer EggSystem.findEggs (already filters ownership/proximity)
+    local ok, res = pcall(function() return EggSystem.findEggs(100) end)
+    if ok and type(res) == "table" and #res > 0 then
+        eggs = res
+    else
+        -- Fallback: scan common Objects_Physical container
+        local farmObjects = workspace:FindFirstChild("Objects_Physical") or workspace:FindFirstChild("Objects")
+        if farmObjects then
+            for _, e in ipairs(farmObjects:GetChildren()) do
+                if e:GetAttribute("IsEgg") or tostring(e.Name):lower():match("egg") then
+                    table.insert(eggs, e)
+                end
+            end
+        end
+    end
+
+    local seen = {}
+    for _, egg in ipairs(eggs) do
+        -- Respect global toggle
+        if not Config["ESP Enabled"] then break end
+
+        local owned = nil
+        pcall(function() owned = EggSystem.isOwnedByPlayer(egg) end)
+        if owned == true then
+            pcall(function() _updateESPForEgg(egg) end)
+            seen[egg] = true
+        end
+    end
+
+    -- Remove orphan ESP folders for eggs no longer present/owned
+    for _, folder in pairs(workspace:GetDescendants()) do
+        if folder.Name == "EggESP" and folder.Parent and not seen[folder.Parent] then
+            pcall(function() folder:Destroy() end)
+        end
+    end
+end
+
+-- Start periodic updater
+task.spawn(function()
+    while true do
+        pcall(_scanAndUpdateESP)
+        task.wait(EggESP.UPDATE_INTERVAL or 2)
+    end
+end)
+
 
 -- ========== GUI BUILDER MODULE ==========
 local function buildGUI()
@@ -539,6 +691,7 @@ local function buildGUI()
     addToggle("Auto Collect", "Auto Collect", 1)
     addToggle("Auto Water", "Auto Water", 2)
     addToggle("Auto Favorite", "Auto Favorite", 3)
+    addToggle("ESP Enabled", "ESP Enabled", 7)
     
     addSlider("Luck Base", "LuckBase", 0, 1, 0.10, "", 4)
     addSlider("Boost %", "LuckBoostPercent", 0, 500, 50, "%", 5)
@@ -556,6 +709,7 @@ local function buildGUI()
     eb.Parent = content
     Instance.new("UICorner", eb).CornerRadius = UDim.new(0, 5)
     
+    eb.LayoutOrder = 8
     eb.MouseButton1Click:Connect(function()
         local eggReport = EggSystem.checkAllEggs()
         print(string.format("🔍 Found %d eggs:", #eggReport))
@@ -569,7 +723,7 @@ local function buildGUI()
     sf.Size = UDim2.new(1, 0, 0, 70)
     sf.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     sf.BorderSizePixel = 0
-    sf.LayoutOrder = 8
+    sf.LayoutOrder = 9
     sf.Parent = content
     Instance.new("UICorner", sf).CornerRadius = UDim.new(0, 5)
     
@@ -593,7 +747,7 @@ local function buildGUI()
     sb.TextColor3 = Color3.fromRGB(255, 255, 255)
     sb.Font = Enum.Font.GothamBold
     sb.TextSize = 12
-    sb.LayoutOrder = 9
+    sb.LayoutOrder = 10
     sb.Parent = content
     Instance.new("UICorner", sb).CornerRadius = UDim.new(0, 5)
     
