@@ -388,6 +388,120 @@ function EggSystem.dumpEggStructure()
     end
 end
 
+-- Find candidate content locations for a given egg
+function EggSystem.findContentCandidates(egg, opts)
+    opts = opts or {}
+    if not egg then return {} end
+
+    local results = {}
+    local seen = {}
+
+    local function push(obj, note)
+        if not obj or seen[obj] then return end
+        seen[obj] = true
+        local path = ""
+        local cur = obj
+        local parts = {}
+        while cur and cur ~= game do
+            table.insert(parts, 1, cur.Name)
+            cur = cur.Parent
+        end
+        path = table.concat(parts, ".")
+
+        local entry = {
+            instance = obj,
+            path = path,
+            class = obj.ClassName,
+            note = note or "",
+            value = nil,
+        }
+
+        -- Try to read common fields safely
+        if obj:IsA("ValueBase") then
+            local ok, v = pcall(function() return obj.Value end)
+            entry.value = ok and v or "<error>"
+        elseif obj:IsA("TextLabel") or obj:IsA("TextBox") then
+            local ok, v = pcall(function() return obj.Text end)
+            entry.value = ok and v or "<error>"
+        elseif obj:IsA("ObjectValue") then
+            local ok, v = pcall(function() return obj.Value end)
+            entry.value = ok and (v and tostring(v.Name) or nil) or "<error>"
+        else
+            -- try attribute read
+            local attrs = obj:GetAttributes()
+            if next(attrs) then
+                entry.value = {}
+                for k, v in pairs(attrs) do entry.value[k] = v end
+            end
+        end
+
+        table.insert(results, entry)
+    end
+
+    -- Candidate name patterns to check (children and descendants)
+    local nameCandidates = {"Content","content","Type","type","EggType","Pet","Plant","Value","Name","ItemType","Contents","Breed","PetType","HatchResult","Result","DisplayName"}
+
+    -- Check the egg itself and its descendants
+    for _, n in ipairs(nameCandidates) do
+        local found = egg:FindFirstChild(n, true)
+        if found then push(found, "descendant by name: " .. n) end
+    end
+
+    -- Check direct children that look like value holders
+    for _, child in pairs(egg:GetChildren()) do
+        if child:IsA("ValueBase") or child:IsA("ObjectValue") or child:IsA("TextLabel") or child:IsA("TextBox") then
+            push(child, "direct child")
+        end
+    end
+
+    -- Check attributes on egg
+    for k, v in pairs(egg:GetAttributes()) do
+        push(egg, "attribute: " .. tostring(k))
+        break
+    end
+
+    -- Check parent container (descendants + common names)
+    if egg.Parent then
+        for _, n in ipairs(nameCandidates) do
+            local found = egg.Parent:FindFirstChild(n, true)
+            if found then push(found, "parent descendant: " .. n) end
+        end
+        for _, child in pairs(egg.Parent:GetChildren()) do
+            if child:IsA("ValueBase") or child:IsA("ObjectValue") then push(child, "parent child") end
+        end
+    end
+
+    -- Nearby containers: search in the common Objects_Physical or PhysicalEggs roots
+    local workspace = game:GetService("Workspace")
+    local nearbyRoots = {workspace:FindFirstChild("Objects_Physical"), workspace:FindFirstChild("PhysicalEggs"), workspace:FindFirstChild("PhysicalEggsShop"), workspace:FindFirstChild("Garden")}
+    for _, root in pairs(nearbyRoots) do
+        if root and root:IsA("Instance") then
+            for _, n in ipairs(nameCandidates) do
+                local found = root:FindFirstChild(n, true)
+                if found then push(found, "nearby root descendant: " .. (root.Name or "root") .. ":" .. n) end
+            end
+        end
+    end
+
+    -- Deduplicate results by path and return
+    local uniq = {}
+    local out = {}
+    for _, e in ipairs(results) do
+        if not uniq[e.path] then
+            uniq[e.path] = true
+            table.insert(out, e)
+        end
+    end
+
+    -- Print summary for convenience
+    print(string.format("🔎 Found %d candidate content fields for '%s':", #out, tostring(egg.Name)))
+    for i, e in ipairs(out) do
+        print(string.format("[%d] %s | %s | value=%s | note=%s", i, e.path, e.class, tostring(e.value), tostring(e.note)))
+    end
+
+    return out
+end
+
 -- ========== SIMPLE EGG ESP ==========
 local EggESP = {}
 EggESP.UPDATE_INTERVAL = 2
