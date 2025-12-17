@@ -105,12 +105,25 @@ end
 -- Get path within player's farm
 function _.GetFarmPath(pathName)
     local farm = _.GetOwnerFarm(player.Name)
-    if not farm then return nil end
+    if not farm then 
+        print("[GetFarmPath] Farm not found for", player.Name)
+        return nil 
+    end
     
     local important = farm:FindFirstChild("Important")
-    if not important then return nil end
+    if not important then 
+        print("[GetFarmPath] Important folder not found")
+        return nil 
+    end
     
-    return important:FindFirstChild(pathName)
+    local path = important:FindFirstChild(pathName)
+    if path then
+        print("[GetFarmPath] Found path:", pathName, "at", path:GetFullName())
+    else
+        print("[GetFarmPath] Path not found:", pathName)
+    end
+    
+    return path
 end
 
 -- Format number with commas
@@ -359,21 +372,43 @@ end
 
 -- Get saved objects (eggs, crates, etc.)
 function _.DataClient.GetSaved_Data()
-    local data = _.DataClient.GetData()
-    if not data then return nil end
+    local success, result = pcall(function()
+        local data = _.DataClient.GetData()
+        if not data then 
+            print("[GetSaved_Data] No data from DataClient")
+            return nil 
+        end
+        
+        local saveSlots = data.SaveSlots
+        if not saveSlots then 
+            print("[GetSaved_Data] No SaveSlots")
+            return nil 
+        end
+        
+        local selectedSlot = saveSlots.SelectedSlot
+        local allSlots = saveSlots.AllSlots
+        
+        if not selectedSlot or not allSlots then 
+            print("[GetSaved_Data] Missing slot data")
+            return nil 
+        end
+        
+        local slotData = allSlots[selectedSlot]
+        if not slotData then 
+            print("[GetSaved_Data] Slot data not found for slot", selectedSlot)
+            return nil 
+        end
+        
+        print("[GetSaved_Data] Successfully retrieved SavedObjects")
+        return slotData.SavedObjects
+    end)
     
-    local saveSlots = data.SaveSlots
-    if not saveSlots then return nil end
-    
-    local selectedSlot = saveSlots.SelectedSlot
-    local allSlots = saveSlots.AllSlots
-    
-    if not selectedSlot or not allSlots then return nil end
-    
-    local slotData = allSlots[selectedSlot]
-    if not slotData then return nil end
-    
-    return slotData.SavedObjects
+    if success then
+        return result
+    else
+        print("[GetSaved_Data] Error:", result)
+        return nil
+    end
 end
 
 -- ========== ESP SYSTEM ==========
@@ -945,95 +980,137 @@ function _.EggESP.Start()
     
     task.spawn(function()
         while true do
-            pcall(function()
-                if not GUI.Config or not GUI.Config["ESP Eggs"] then
-                    task.wait(2)
+            local success, err = pcall(function()
+                if not GUI or not GUI.Config or not GUI.Config["ESP Eggs"] then
                     return
                 end
                 
-                local objectsFolder = _.GetFarmPath("Objects_Physical")
+                print("[ESP] Scanning for eggs...")
+                
+                -- Try multiple paths to find eggs
+                local objectsFolder = nil
+                local possiblePaths = {
+                    Workspace:FindFirstChild("Objects_Physical"),
+                    Workspace:FindFirstChild("Objects"),
+                }
+                
+                -- Also try farm path
+                local farmPath = _.GetFarmPath("Objects_Physical")
+                if farmPath then
+                    table.insert(possiblePaths, 1, farmPath)
+                end
+                
+                for _, path in ipairs(possiblePaths) do
+                    if path then
+                        objectsFolder = path
+                        break
+                    end
+                end
+                
                 if not objectsFolder then
-                    task.wait(2)
+                    print("[ESP] Objects folder not found")
                     return
                 end
                 
-                local savedData = _.DataClient.GetSaved_Data()
+                print("[ESP] Found objects folder:", objectsFolder:GetFullName())
+                
                 local eggCount = 0
                 local readyCount = 0
+                local savedData = nil
+                
+                -- Try to get saved data
+                pcall(function()
+                    savedData = _.DataClient.GetSaved_Data()
+                end)
                 
                 for _, obj in ipairs(objectsFolder:GetChildren()) do
-                    if obj:GetAttribute("OWNER") == player.Name and obj.Name == "PetEgg" then
-                        eggCount = eggCount + 1
-                        local uuid = obj:GetAttribute("OBJECT_UUID")
-                        local ready = obj:GetAttribute("READY")
-                        local timeToHatch = obj:GetAttribute("TimeToHatch")
-                        
-                        if ready then
-                            readyCount = readyCount + 1
-                        end
-                        
-                        -- Create or update ESP
-                        if not obj:FindFirstChild("ESP") then
-                            _.ESP.CreateESP(obj, {
-                                Color = Color3.fromRGB(0, 255, 255),
-                                Text = "Loading...",
-                                Enabled = true
-                            })
-                        end
-                        
-                        -- Update ESP text
-                        local esp = obj:FindFirstChild("ESP")
-                        if esp then
-                            local billboard = esp:FindFirstChild("ESP")
-                            if billboard then
-                                local billboardGui = billboard:FindFirstChildWhichIsA("BillboardGui")
-                                if billboardGui then
-                                    local textLabel = billboardGui:FindFirstChild("TextLabel")
-                                    
-                                    if textLabel then
-                                        local eggName = obj:GetAttribute("EggName") or "Unknown Egg"
-                                        
-                                        if ready then
-                                            -- Show pet info
-                                            if savedData and uuid and GUI.Config["Show Pet Info"] then
-                                                local eggData = savedData[uuid]
-                                                if eggData and eggData.Data then
-                                                    local petType = eggData.Data.Type or "Unknown"
-                                                    local baseWeight = eggData.Data.BaseWeight or 1
-                                                    local weight = _.Calculator.CurrentWeight(baseWeight, 1)
-                                                    
-                                                    textLabel.Text = string.format("<font color='rgb(0,255,0)'>READY</font>\n<font color='rgb(255,255,255)'>%s</font>\n<font color='rgb(255,215,0)'>%.2f KG</font>", petType, weight)
-                                                    textLabel.RichText = true
-                                                else
-                                                    textLabel.Text = "READY\n" .. eggName
-                                                    textLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-                                                end
-                                            else
-                                                textLabel.Text = "READY\n" .. eggName
-                                                textLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-                                            end
-                                        elseif timeToHatch and timeToHatch > 0 then
-                                            -- Show timer
-                                            local mins = math.floor(timeToHatch / 60)
-                                            local secs = math.floor(timeToHatch % 60)
-                                            textLabel.Text = string.format("<font color='rgb(0,255,255)'>%s</font>\n<font color='rgb(255,200,0)'>%d:%02d</font>", eggName, mins, secs)
-                                            textLabel.RichText = true
+                    -- Check if it's an egg
+                    local isEgg = obj.Name == "PetEgg" or obj:GetAttribute("Type") == "PetEgg" or obj:FindFirstChild("EggName")
+                    
+                    if isEgg then
+                        local owner = obj:GetAttribute("OWNER")
+                        if owner == player.Name then
+                            eggCount = eggCount + 1
+                            
+                            local uuid = obj:GetAttribute("OBJECT_UUID")
+                            local ready = obj:GetAttribute("READY") or obj:GetAttribute("Ready")
+                            local timeToHatch = obj:GetAttribute("TimeToHatch") or obj:GetAttribute("Timer")
+                            local eggName = obj:GetAttribute("EggName") or "Egg"
+                            
+                            if ready then
+                                readyCount = readyCount + 1
+                            end
+                            
+                            print("[ESP] Found egg:", eggName, "Ready:", ready, "Timer:", timeToHatch)
+                            
+                            -- Create simple billboard ESP
+                            local existingESP = obj:FindFirstChild("EggESP_Label")
+                            if not existingESP then
+                                local billboard = Instance.new("BillboardGui")
+                                billboard.Name = "EggESP_Label"
+                                billboard.AlwaysOnTop = true
+                                billboard.Size = UDim2.new(0, 200, 0, 50)
+                                billboard.StudsOffset = Vector3.new(0, 3, 0)
+                                billboard.Parent = obj
+                                
+                                local label = Instance.new("TextLabel")
+                                label.BackgroundTransparency = 1
+                                label.Size = UDim2.new(1, 0, 1, 0)
+                                label.TextSize = 14
+                                label.Font = Enum.Font.GothamBold
+                                label.TextStrokeTransparency = 0.5
+                                label.RichText = true
+                                label.Parent = billboard
+                                
+                                existingESP = billboard
+                            end
+                            
+                            -- Update ESP text
+                            local label = existingESP:FindFirstChildOfClass("TextLabel")
+                            if label then
+                                if ready then
+                                    -- Show pet info if available
+                                    if savedData and uuid and GUI.Config["Show Pet Info"] then
+                                        local eggData = savedData[uuid]
+                                        if eggData and eggData.Data then
+                                            local petType = eggData.Data.Type or "Unknown"
+                                            local baseWeight = eggData.Data.BaseWeight or 1
+                                            local weight = baseWeight + (baseWeight * 0.1)
+                                            
+                                            label.Text = string.format("<font color='rgb(0,255,0)'>✓ READY</font>\n<font color='rgb(255,255,255)'>%s</font>\n<font color='rgb(255,215,0)'>%.2f KG</font>", petType, weight)
                                         else
-                                            textLabel.Text = eggName
-                                            textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                                            label.Text = string.format("<font color='rgb(0,255,0)'>✓ READY</font>\n<font color='rgb(255,255,255)'>%s</font>", eggName)
                                         end
+                                    else
+                                        label.Text = string.format("<font color='rgb(0,255,0)'>✓ READY</font>\n<font color='rgb(255,255,255)'>%s</font>", eggName)
                                     end
+                                elseif timeToHatch and type(timeToHatch) == "number" and timeToHatch > 0 then
+                                    local mins = math.floor(timeToHatch / 60)
+                                    local secs = math.floor(timeToHatch % 60)
+                                    label.Text = string.format("<font color='rgb(0,255,255)'>%s</font>\n<font color='rgb(255,200,0)'>⏱ %d:%02d</font>", eggName, mins, secs)
+                                else
+                                    label.Text = string.format("<font color='rgb(255,255,255)'>%s</font>", eggName)
                                 end
                             end
                         end
                     end
                 end
                 
+                print("[ESP] Scan complete. Eggs:", eggCount, "Ready:", readyCount)
+                
                 -- Update GUI status
-                _.GUI.UpdateStatus(eggCount, readyCount)
+                if GUI and GUI.UpdateStatus then
+                    pcall(function()
+                        _.GUI.UpdateStatus(eggCount, readyCount)
+                    end)
+                end
             end)
             
-            task.wait(2)
+            if not success then
+                warn("[ESP] Error:", err)
+            end
+            
+            task.wait(3)
         end
     end)
 end
