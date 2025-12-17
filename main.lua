@@ -218,21 +218,20 @@ function EggSystem.watchEggs(callback)
             -- Only watch while running
             if not State.running then
                 task.wait(1)
-                continue
-            end
+            else
+                local eggs = EggSystem.findEggs()
 
-            local eggs = EggSystem.findEggs()
+                for i, egg in pairs(eggs) do
+                    local info = EggSystem.getEggInfo(egg)
+                    local lastState = lastStates[egg]
 
-            for i, egg in pairs(eggs) do
-                local info = EggSystem.getEggInfo(egg)
-                local lastState = lastStates[egg]
+                    if lastState and lastState.timerComplete == false and info and info.timerComplete == true then
+                        print("⏰ EGG TIMER COMPLETED!")
+                        if callback then pcall(callback, egg, info) end
+                    end
 
-                if lastState and lastState.timerComplete == false and info and info.timerComplete == true then
-                    print("⏰ EGG TIMER COMPLETED!")
-                    if callback then pcall(callback, egg, info) end
+                    lastStates[egg] = info
                 end
-
-                lastStates[egg] = info
             end
 
             task.wait(1)
