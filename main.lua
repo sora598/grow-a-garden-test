@@ -66,7 +66,8 @@ local State = {
 -- ========== EGG DETECTION & CHECKING ==========
 local EggSystem = {}
 
-function EggSystem.findEggs()
+function EggSystem.findEggs(maxEggs)
+    maxEggs = maxEggs or 20  -- Limit to 20 eggs by default for performance
     local eggs = {}
     local workspace = game:GetService("Workspace")
 
@@ -79,7 +80,11 @@ function EggSystem.findEggs()
     end
 
     local function searchForEggs(parent)
+        if #eggs >= maxEggs then return end  -- Stop if we've reached the limit
+        
         for _, obj in pairs(parent:GetChildren()) do
+            if #eggs >= maxEggs then break end  -- Stop if we've reached the limit
+            
             local ok, name = pcall(function() return obj.Name end)
             name = (ok and tostring(name) or ""):lower()
 
@@ -95,6 +100,7 @@ function EggSystem.findEggs()
     end
 
     for _, root in ipairs(roots) do
+        if #eggs >= maxEggs then break end  -- Stop if we've reached the limit
         if root and root:IsA("Instance") then
             pcall(function() searchForEggs(root) end)
         end
