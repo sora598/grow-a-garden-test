@@ -652,153 +652,189 @@ function _.GUI.Create()
     
     sg.Parent = getGuiParent()
     
-    -- Main frame
+    -- Main frame - Mobile optimized size
     local main = Instance.new("Frame")
     main.Name = "MainFrame"
-    main.Size = UDim2.new(0, 350, 0, 500)
-    main.Position = UDim2.new(1, -360, 0.5, -250)
-    main.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    main.Size = UDim2.new(0, 280, 0, 360)
+    main.Position = UDim2.new(0.5, -140, 0.5, -180)
+    main.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
     main.BorderSizePixel = 0
     main.Parent = sg
     
-    Instance.new("UICorner", main).CornerRadius = UDim.new(0, 12)
+    -- Gradient background
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(18, 18, 22)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(28, 28, 35))
+    }
+    gradient.Rotation = 45
+    gradient.Parent = main
+    
+    Instance.new("UICorner", main).CornerRadius = UDim.new(0, 16)
+    
+    -- Drop shadow effect
+    local shadow = Instance.new("ImageLabel")
+    shadow.Name = "Shadow"
+    shadow.BackgroundTransparency = 1
+    shadow.Position = UDim2.new(0, -15, 0, -15)
+    shadow.Size = UDim2.new(1, 30, 1, 30)
+    shadow.ZIndex = 0
+    shadow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+    shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+    shadow.ImageTransparency = 0.7
+    shadow.ScaleType = Enum.ScaleType.Slice
+    shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+    shadow.Parent = main
     
     -- Header
     local header = Instance.new("Frame")
     header.Name = "Header"
-    header.Size = UDim2.new(1, 0, 0, 45)
-    header.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    header.Size = UDim2.new(1, 0, 0, 40)
+    header.BackgroundColor3 = Color3.fromRGB(100, 255, 150)
     header.BorderSizePixel = 0
     header.Parent = main
     
-    Instance.new("UICorner", header).CornerRadius = UDim.new(0, 12)
+    local headerGradient = Instance.new("UIGradient")
+    headerGradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(80, 200, 120)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 255, 150))
+    }
+    headerGradient.Rotation = 90
+    headerGradient.Parent = header
     
-    -- Title
+    Instance.new("UICorner", header).CornerRadius = UDim.new(0, 16)
+    
+    -- Title with icon
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Size = UDim2.new(1, -50, 1, 0)
-    title.Position = UDim2.new(0, 10, 0, 0)
+    title.Size = UDim2.new(1, -45, 1, 0)
+    title.Position = UDim2.new(0, 12, 0, 0)
     title.BackgroundTransparency = 1
-    title.Text = "🌱 Grow a Garden"
-    title.TextColor3 = Color3.fromRGB(100, 255, 150)
+    title.Text = "🌱 Grow Garden"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
     title.Font = Enum.Font.GothamBold
-    title.TextSize = 18
+    title.TextSize = 16
     title.TextXAlignment = Enum.TextXAlignment.Left
+    title.TextStrokeTransparency = 0.5
     title.Parent = header
     
     -- Close button
     local closeBtn = Instance.new("TextButton")
     closeBtn.Name = "CloseButton"
-    closeBtn.Size = UDim2.new(0, 35, 0, 35)
-    closeBtn.Position = UDim2.new(1, -40, 0, 5)
-    closeBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
-    closeBtn.Text = "×"
+    closeBtn.Size = UDim2.new(0, 32, 0, 32)
+    closeBtn.Position = UDim2.new(1, -36, 0, 4)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+    closeBtn.Text = "✕"
     closeBtn.TextColor3 = Color3.new(1, 1, 1)
     closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.TextSize = 24
+    closeBtn.TextSize = 18
+    closeBtn.BorderSizePixel = 0
     closeBtn.Parent = header
     
     Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 8)
     
     closeBtn.MouseButton1Click:Connect(function()
+        TweenService:Create(main, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 0),
+            Position = UDim2.new(0.5, 0, 0.5, 0)
+        }):Play()
+        task.wait(0.3)
         sg:Destroy()
     end)
     
     -- Content frame
     local content = Instance.new("ScrollingFrame")
     content.Name = "Content"
-    content.Size = UDim2.new(1, -20, 1, -65)
-    content.Position = UDim2.new(0, 10, 0, 55)
+    content.Size = UDim2.new(1, -16, 1, -52)
+    content.Position = UDim2.new(0, 8, 0, 44)
     content.BackgroundTransparency = 1
     content.BorderSizePixel = 0
-    content.ScrollBarThickness = 6
+    content.ScrollBarThickness = 4
     content.ScrollBarImageColor3 = Color3.fromRGB(100, 255, 150)
     content.CanvasSize = UDim2.new(0, 0, 0, 0)
     content.Parent = main
     
     local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 8)
+    layout.Padding = UDim.new(0, 6)
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.Parent = content
     
     -- Auto-resize canvas
     layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        content.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
+        content.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 8)
     end)
     
     -- Config storage
     GUI.Config = {
-        ["Auto Collect Eggs"] = false,
         ["ESP Eggs"] = true,
         ["Show Pet Info"] = true,
+        ["Auto Collect"] = false,
         ["Auto Hatch"] = false,
     }
     
-    -- Create section function
-    local function createSection(name)
-        local section = Instance.new("Frame")
-        section.Name = name
-        section.Size = UDim2.new(1, 0, 0, 35)
-        section.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        section.BorderSizePixel = 0
-        section.Parent = content
-        
-        Instance.new("UICorner", section).CornerRadius = UDim.new(0, 8)
-        
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, -10, 1, 0)
-        label.Position = UDim2.new(0, 10, 0, 0)
-        label.BackgroundTransparency = 1
-        label.Text = name
-        label.TextColor3 = Color3.fromRGB(200, 200, 200)
-        label.Font = Enum.Font.GothamBold
-        label.TextSize = 14
-        label.TextXAlignment = Enum.TextXAlignment.Left
-        label.Parent = section
-        
-        return section
-    end
-    
     -- Create toggle function
-    local function createToggle(name, default)
+    local function createToggle(name, icon, default)
         local toggle = Instance.new("Frame")
         toggle.Name = name
-        toggle.Size = UDim2.new(1, 0, 0, 40)
-        toggle.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+        toggle.Size = UDim2.new(1, 0, 0, 36)
+        toggle.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
         toggle.BorderSizePixel = 0
         toggle.Parent = content
         
-        Instance.new("UICorner", toggle).CornerRadius = UDim.new(0, 8)
+        Instance.new("UICorner", toggle).CornerRadius = UDim.new(0, 10)
         
+        -- Icon
+        local iconLabel = Instance.new("TextLabel")
+        iconLabel.Size = UDim2.new(0, 24, 0, 24)
+        iconLabel.Position = UDim2.new(0, 8, 0.5, -12)
+        iconLabel.BackgroundTransparency = 1
+        iconLabel.Text = icon
+        iconLabel.TextSize = 16
+        iconLabel.Parent = toggle
+        
+        -- Label
         local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, -60, 1, 0)
-        label.Position = UDim2.new(0, 10, 0, 0)
+        label.Size = UDim2.new(1, -80, 1, 0)
+        label.Position = UDim2.new(0, 36, 0, 0)
         label.BackgroundTransparency = 1
         label.Text = name
-        label.TextColor3 = Color3.fromRGB(220, 220, 220)
+        label.TextColor3 = Color3.fromRGB(230, 230, 230)
         label.Font = Enum.Font.Gotham
-        label.TextSize = 13
+        label.TextSize = 12
         label.TextXAlignment = Enum.TextXAlignment.Left
         label.Parent = toggle
         
+        -- Toggle button
         local button = Instance.new("TextButton")
-        button.Size = UDim2.new(0, 45, 0, 25)
-        button.Position = UDim2.new(1, -50, 0.5, -12.5)
-        button.BackgroundColor3 = default and Color3.fromRGB(100, 255, 150) or Color3.fromRGB(60, 60, 70)
-        button.Text = default and "ON" or "OFF"
-        button.TextColor3 = Color3.new(1, 1, 1)
-        button.Font = Enum.Font.GothamBold
-        button.TextSize = 11
+        button.Size = UDim2.new(0, 40, 0, 20)
+        button.Position = UDim2.new(1, -44, 0.5, -10)
+        button.BackgroundColor3 = default and Color3.fromRGB(100, 255, 150) or Color3.fromRGB(50, 50, 60)
+        button.Text = ""
+        button.BorderSizePixel = 0
         button.Parent = toggle
         
-        Instance.new("UICorner", button).CornerRadius = UDim.new(0, 6)
+        Instance.new("UICorner", button).CornerRadius = UDim.new(1, 0)
+        
+        -- Toggle knob
+        local knob = Instance.new("Frame")
+        knob.Size = UDim2.new(0, 16, 0, 16)
+        knob.Position = default and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+        knob.BackgroundColor3 = Color3.new(1, 1, 1)
+        knob.BorderSizePixel = 0
+        knob.Parent = button
+        
+        Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
         
         GUI.Config[name] = default
         
         button.MouseButton1Click:Connect(function()
             GUI.Config[name] = not GUI.Config[name]
-            button.Text = GUI.Config[name] and "ON" or "OFF"
-            button.BackgroundColor3 = GUI.Config[name] and Color3.fromRGB(100, 255, 150) or Color3.fromRGB(60, 60, 70)
+            
+            local newColor = GUI.Config[name] and Color3.fromRGB(100, 255, 150) or Color3.fromRGB(50, 50, 60)
+            local newPos = GUI.Config[name] and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+            
+            TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = newColor}):Play()
+            TweenService:Create(knob, TweenInfo.new(0.2, Enum.EasingStyle.Back), {Position = newPos}):Play()
         end)
         
         return toggle
@@ -808,22 +844,31 @@ function _.GUI.Create()
     local function createStatus()
         local status = Instance.new("Frame")
         status.Name = "Status"
-        status.Size = UDim2.new(1, 0, 0, 60)
-        status.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        status.Size = UDim2.new(1, 0, 0, 70)
+        status.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
         status.BorderSizePixel = 0
         status.Parent = content
         
-        Instance.new("UICorner", status).CornerRadius = UDim.new(0, 8)
+        Instance.new("UICorner", status).CornerRadius = UDim.new(0, 10)
+        
+        -- Status gradient
+        local statusGrad = Instance.new("UIGradient")
+        statusGrad.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 32)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 35, 45))
+        }
+        statusGrad.Rotation = 135
+        statusGrad.Parent = status
         
         local label = Instance.new("TextLabel")
         label.Name = "StatusLabel"
-        label.Size = UDim2.new(1, -20, 1, -10)
-        label.Position = UDim2.new(0, 10, 0, 5)
+        label.Size = UDim2.new(1, -16, 1, -8)
+        label.Position = UDim2.new(0, 8, 0, 4)
         label.BackgroundTransparency = 1
-        label.Text = "Status: Ready\nEggs: 0 | Ready: 0"
-        label.TextColor3 = Color3.fromRGB(150, 150, 150)
+        label.Text = "📊 Status\n━━━━━━━━━━━\nEggs: 0 | Ready: 0\nScript: Active ✓"
+        label.TextColor3 = Color3.fromRGB(180, 180, 180)
         label.Font = Enum.Font.Code
-        label.TextSize = 12
+        label.TextSize = 11
         label.TextXAlignment = Enum.TextXAlignment.Left
         label.TextYAlignment = Enum.TextYAlignment.Top
         label.Parent = status
@@ -834,21 +879,18 @@ function _.GUI.Create()
     end
     
     -- Build GUI
-    createSection("🥚 Egg Settings")
-    createToggle("Auto Collect Eggs", false)
-    createToggle("ESP Eggs", true)
-    createToggle("Show Pet Info", true)
-    createToggle("Auto Hatch", false)
-    
-    createSection("📊 Status")
     createStatus()
+    createToggle("ESP Eggs", "👁", true)
+    createToggle("Show Pet Info", "📝", true)
+    createToggle("Auto Collect", "🥚", false)
+    createToggle("Auto Hatch", "🐣", false)
     
     -- Make draggable
     local dragging = false
     local dragInput, dragStart, startPos
     
     header.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
             startPos = main.Position
@@ -862,7 +904,7 @@ function _.GUI.Create()
     end)
     
     header.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
     end)
@@ -874,13 +916,23 @@ function _.GUI.Create()
         end
     end)
     
+    -- Entrance animation
+    main.Size = UDim2.new(0, 0, 0, 0)
+    main.Position = UDim2.new(0.5, 0, 0.5, 0)
+    
+    TweenService:Create(main, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 280, 0, 360),
+        Position = UDim2.new(0.5, -140, 0.5, -180)
+    }):Play()
+    
     print("✅ GUI created successfully!")
     return GUI
 end
 
 -- Update status function
-function _.GUI.UpdateStatus(text)
+function _.GUI.UpdateStatus(eggCount, readyCount)
     if GUI.StatusLabel then
+        local text = string.format("📊 Status\n━━━━━━━━━━━\nEggs: %d | Ready: %d\nScript: Active ✓", eggCount or 0, readyCount or 0)
         GUI.StatusLabel.Text = text
     end
 end
@@ -893,71 +945,93 @@ function _.EggESP.Start()
     
     task.spawn(function()
         while true do
-            if GUI.Config and GUI.Config["ESP Eggs"] then
+            pcall(function()
+                if not GUI.Config or not GUI.Config["ESP Eggs"] then
+                    task.wait(2)
+                    return
+                end
+                
                 local objectsFolder = _.GetFarmPath("Objects_Physical")
-                if objectsFolder then
-                    local savedData = _.DataClient.GetSaved_Data()
-                    
-                    for _, obj in ipairs(objectsFolder:GetChildren()) do
-                        if obj:GetAttribute("OWNER") == player.Name and obj.Name == "PetEgg" then
-                            local uuid = obj:GetAttribute("OBJECT_UUID")
-                            local ready = obj:GetAttribute("READY")
-                            local timeToHatch = obj:GetAttribute("TimeToHatch")
-                            
-                            -- Create or update ESP
-                            if not obj:FindFirstChild("ESP") then
-                                _.ESP.CreateESP(obj, {
-                                    Color = Color3.fromRGB(0, 255, 255),
-                                    Text = "Loading...",
-                                    Enabled = true
-                                })
-                            end
-                            
-                            -- Update ESP text
-                            local esp = obj:FindFirstChild("ESP")
-                            if esp then
-                                local billboard = esp:FindFirstChild("ESP")
-                                local textLabel = billboard and billboard:FindFirstChildWhichIsA("BillboardGui")
-                                textLabel = textLabel and textLabel:FindFirstChild("TextLabel")
-                                
-                                if textLabel then
-                                    local eggName = obj:GetAttribute("EggName") or "Unknown Egg"
+                if not objectsFolder then
+                    task.wait(2)
+                    return
+                end
+                
+                local savedData = _.DataClient.GetSaved_Data()
+                local eggCount = 0
+                local readyCount = 0
+                
+                for _, obj in ipairs(objectsFolder:GetChildren()) do
+                    if obj:GetAttribute("OWNER") == player.Name and obj.Name == "PetEgg" then
+                        eggCount = eggCount + 1
+                        local uuid = obj:GetAttribute("OBJECT_UUID")
+                        local ready = obj:GetAttribute("READY")
+                        local timeToHatch = obj:GetAttribute("TimeToHatch")
+                        
+                        if ready then
+                            readyCount = readyCount + 1
+                        end
+                        
+                        -- Create or update ESP
+                        if not obj:FindFirstChild("ESP") then
+                            _.ESP.CreateESP(obj, {
+                                Color = Color3.fromRGB(0, 255, 255),
+                                Text = "Loading...",
+                                Enabled = true
+                            })
+                        end
+                        
+                        -- Update ESP text
+                        local esp = obj:FindFirstChild("ESP")
+                        if esp then
+                            local billboard = esp:FindFirstChild("ESP")
+                            if billboard then
+                                local billboardGui = billboard:FindFirstChildWhichIsA("BillboardGui")
+                                if billboardGui then
+                                    local textLabel = billboardGui:FindFirstChild("TextLabel")
                                     
-                                    if ready then
-                                        -- Show pet info
-                                        if savedData and uuid and GUI.Config["Show Pet Info"] then
-                                            local eggData = savedData[uuid]
-                                            if eggData and eggData.Data then
-                                                local petType = eggData.Data.Type or "Unknown"
-                                                local baseWeight = eggData.Data.BaseWeight or 1
-                                                local weight = _.Calculator.CurrentWeight(baseWeight, 1)
-                                                
-                                                textLabel.Text = string.format("%s\n%.2f KG", petType, weight)
-                                                textLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                                    if textLabel then
+                                        local eggName = obj:GetAttribute("EggName") or "Unknown Egg"
+                                        
+                                        if ready then
+                                            -- Show pet info
+                                            if savedData and uuid and GUI.Config["Show Pet Info"] then
+                                                local eggData = savedData[uuid]
+                                                if eggData and eggData.Data then
+                                                    local petType = eggData.Data.Type or "Unknown"
+                                                    local baseWeight = eggData.Data.BaseWeight or 1
+                                                    local weight = _.Calculator.CurrentWeight(baseWeight, 1)
+                                                    
+                                                    textLabel.Text = string.format("<font color='rgb(0,255,0)'>READY</font>\n<font color='rgb(255,255,255)'>%s</font>\n<font color='rgb(255,215,0)'>%.2f KG</font>", petType, weight)
+                                                    textLabel.RichText = true
+                                                else
+                                                    textLabel.Text = "READY\n" .. eggName
+                                                    textLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                                                end
                                             else
-                                                textLabel.Text = "READY: " .. eggName
+                                                textLabel.Text = "READY\n" .. eggName
                                                 textLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                                             end
+                                        elseif timeToHatch and timeToHatch > 0 then
+                                            -- Show timer
+                                            local mins = math.floor(timeToHatch / 60)
+                                            local secs = math.floor(timeToHatch % 60)
+                                            textLabel.Text = string.format("<font color='rgb(0,255,255)'>%s</font>\n<font color='rgb(255,200,0)'>%d:%02d</font>", eggName, mins, secs)
+                                            textLabel.RichText = true
                                         else
-                                            textLabel.Text = "READY: " .. eggName
-                                            textLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                                            textLabel.Text = eggName
+                                            textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
                                         end
-                                    elseif timeToHatch and timeToHatch > 0 then
-                                        -- Show timer
-                                        local mins = math.floor(timeToHatch / 60)
-                                        local secs = math.floor(timeToHatch % 60)
-                                        textLabel.Text = string.format("%s\n%d:%02d", eggName, mins, secs)
-                                        textLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
-                                    else
-                                        textLabel.Text = eggName
-                                        textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
                                     end
                                 end
                             end
                         end
                     end
                 end
-            end
+                
+                -- Update GUI status
+                _.GUI.UpdateStatus(eggCount, readyCount)
+            end)
             
             task.wait(2)
         end
