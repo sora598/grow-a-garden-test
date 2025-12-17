@@ -17,7 +17,25 @@ grow-a-garden-test/
 
 ## 🚀 Quick Start
 
-### Method 1: Direct GitHub LoadString (Public Repo Only)
+### 🎮 **Method 1: Full GUI (Easiest - Recommended)**
+
+One line to run everything with a full control interface:
+
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/sora598/grow-a-garden-test/main/gui.lua"))()
+```
+
+**Features:**
+- ✅ Toggle switches for all features
+- ✅ Luck boost sliders (base, boost %, max cap)
+- ✅ Real-time status display
+- ✅ Start/Stop controls
+- ✅ Draggable & minimizable
+- ✅ Live statistics (items collected, uptime)
+
+---
+
+### Method 2: Direct GitHub LoadString (Public Repo Only)
 
 If your repository is **public**, use direct URLs:
 

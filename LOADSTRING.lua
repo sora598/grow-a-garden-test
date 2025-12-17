@@ -2,12 +2,17 @@
 -- Repo is public and accessible ✓
 
 -- ========================================
--- QUICK TEST (Run this first to verify)
+-- 🎮 FULL GUI VERSION (RECOMMENDED)
+-- ========================================
+loadstring(game:HttpGet("https://raw.githubusercontent.com/sora598/grow-a-garden-test/main/gui.lua"))()
+
+-- ========================================
+-- 🧪 QUICK TEST (Verify luck calculations)
 -- ========================================
 loadstring(game:HttpGet("https://raw.githubusercontent.com/sora598/grow-a-garden-test/main/tests/mobile_test.lua"))()
 
 -- ========================================
--- LOAD MAIN MODULE (for your script)
+-- 📦 LOAD MAIN MODULE ONLY (for custom scripts)
 -- ========================================
 local Deobf = loadstring(game:HttpGet("https://raw.githubusercontent.com/sora598/grow-a-garden-test/main/src/Grow_a_Garden.deobf.lua"))()
 
