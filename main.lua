@@ -339,6 +339,7 @@ function EggSystem.getEggInfo(egg)
             if ok then info.properties[child.Name] = v end
         end
     end
+end
 
 function EggSystem.checkAllEggs()
     local eggs = EggSystem.findEggs()
