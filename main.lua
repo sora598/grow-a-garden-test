@@ -119,7 +119,8 @@ function EggSystem.getEggInfo(egg)
         timerValue = nil,
         timerComplete = false,
         content = nil,
-        properties = {}
+        properties = {},
+        parentInfo = nil
     }
 
     -- Safe position extraction: only query PrimaryPart for Models, never index PrimaryPart on Folders
@@ -138,8 +139,16 @@ function EggSystem.getEggInfo(egg)
         end
     end
 
-    -- Try to find timer
+    -- Try to find timer (check egg itself first, then parent)
     local timer = egg:FindFirstChild("Timer") or egg:FindFirstChild("timer") or egg:FindFirstChild("Hatch_Timer")
+    
+    -- If not found on egg, check parent folder
+    if not timer and egg.Parent then
+        local parent = egg.Parent
+        timer = parent:FindFirstChild("Timer") or parent:FindFirstChild("timer") or parent:FindFirstChild("Hatch_Timer")
+        if timer then info.parentInfo = parent.Name end
+    end
+    
     if timer then
         if timer:IsA("NumberValue") or timer:IsA("IntValue") then
             local ok, v = pcall(function() return timer.Value end)
@@ -155,8 +164,14 @@ function EggSystem.getEggInfo(egg)
         end
     end
 
-    -- Try to find content/type
+    -- Try to find content/type (check egg itself first, then parent)
     local content = egg:FindFirstChild("Content") or egg:FindFirstChild("content") or egg:FindFirstChild("Type") or egg:FindFirstChild("type")
+    
+    if not content and egg.Parent then
+        local parent = egg.Parent
+        content = parent:FindFirstChild("Content") or parent:FindFirstChild("content") or parent:FindFirstChild("Type") or parent:FindFirstChild("type")
+    end
+    
     if content then
         if content:IsA("StringValue") then
             local ok, v = pcall(function() return content.Value end)
@@ -167,7 +182,7 @@ function EggSystem.getEggInfo(egg)
         end
     end
 
-    -- Store safe custom properties
+    -- Store safe custom properties from egg
     for _, child in pairs(egg:GetChildren()) do
         if child:IsA("NumberValue") or child:IsA("StringValue") or child:IsA("BoolValue") then
             local ok, v = pcall(function() return child.Value end)
@@ -223,6 +238,59 @@ function EggSystem.watchEggs(callback)
             task.wait(1)
         end
     end)
+end
+
+-- Debug function: dump full structure of first egg
+function EggSystem.dumpEggStructure()
+    local eggs = EggSystem.findEggs(1)
+    if #eggs == 0 then
+        print("❌ No eggs found")
+        return
+    end
+    
+    local egg = eggs[1]
+    print("🥚 EGG STRUCTURE DUMP: " .. egg.Name)
+    print("=" .. string.rep("=", 60))
+    
+    local function dump(obj, depth, maxDepth)
+        if depth > (maxDepth or 5) then return end
+        local indent = string.rep("  ", depth)
+        
+        local info = indent .. "├─ " .. obj.Name .. " (" .. obj.ClassName .. ")"
+        
+        -- Show values for value types
+        if obj:IsA("ValueBase") then
+            local ok, val = pcall(function() return obj.Value end)
+            info = info .. " = " .. tostring(ok and val or "<?>"
+        elseif obj:IsA("TextLabel") or obj:IsA("TextBox") then
+            local ok, txt = pcall(function() return obj.Text end)
+            info = info .. " = \"" .. tostring(ok and txt or "<?>"
+        end
+        
+        print(info)
+        
+        -- Show attributes
+        local attrs = obj:GetAttributes()
+        if next(attrs) then
+            for k, v in pairs(attrs) do
+                print(indent .. "   📌 " .. k .. " = " .. tostring(v))
+            end
+        end
+        
+        -- Recurse
+        for _, child in pairs(obj:GetChildren()) do
+            dump(child, depth + 1, maxDepth)
+        end
+    end
+    
+    dump(egg, 0, 4)
+    
+    -- Also dump parent
+    if egg.Parent then
+        print("\n📂 PARENT STRUCTURE: " .. egg.Parent.Name)
+        print("=" .. string.rep("=", 60))
+        dump(egg.Parent, 0, 3)
+    end
 end
 
 -- ========== GUI BUILDER MODULE ==========
