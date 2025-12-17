@@ -958,33 +958,57 @@ end
 function _.Initialize()
     print("🌱 Initializing Grow a Garden Clean Implementation...")
     
-    -- Load Data.json
-    local dataLoaded = _.LoadData()
-    if dataLoaded then
-        print("✅ Data.json loaded successfully")
-    else
-        warn("⚠️ Failed to load Data.json")
+    -- Wrap everything in pcall to catch errors
+    local success, error = pcall(function()
+        -- Load Data.json
+        local dataLoaded = _.LoadData()
+        if dataLoaded then
+            print("✅ Data.json loaded successfully")
+        else
+            print("⚠️ Data.json not loaded (optional)")
+        end
+        
+        -- Initialize data client
+        local dataSuccess, playerData = pcall(function()
+            return _.DataClient.GetData()
+        end)
+        
+        if dataSuccess and playerData then
+            print("✅ Player data loaded successfully")
+        else
+            print("⚠️ Player data not loaded (will retry later)")
+        end
+        
+        -- Create GUI
+        print("🎨 Creating GUI...")
+        GUI = _.GUI.Create()
+        print("✅ GUI created!")
+        
+        -- Start Egg ESP
+        print("🔍 Starting Egg ESP...")
+        _.EggESP.Start()
+        print("✅ Egg ESP started!")
+    end)
+    
+    if not success then
+        warn("❌ Initialization error:", error)
+        return false
     end
-    
-    -- Initialize data client
-    local playerData = _.DataClient.GetData()
-    if playerData then
-        print("✅ Player data loaded successfully")
-    else
-        warn("⚠️ Failed to load player data")
-    end
-    
-    -- Create GUI
-    GUI = _.GUI.Create()
-    
-    -- Start Egg ESP
-    _.EggESP.Start()
     
     print("✅ Initialization complete!")
+    return true
 end
 
--- Auto-initialize
-_.Initialize()
+-- Auto-initialize with error handling
+local initSuccess, initError = pcall(_.Initialize)
+
+if not initSuccess then
+    warn("❌ Failed to initialize Grow a Garden:")
+    warn(initError)
+    warn("Please report this error to the developer!")
+else
+    print("🎮 Grow a Garden is ready!")
+end
 
 -- Return module
 return _

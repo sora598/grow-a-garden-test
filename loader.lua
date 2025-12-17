@@ -10,20 +10,35 @@ local success, result = pcall(function()
     return game:HttpGet(url)
 end)
 
-if success and result then
-    print("✅ Script downloaded successfully!")
-    print("⚡ Executing...")
-    
-    local executeSuccess, executeResult = pcall(function()
-        return loadstring(result)()
-    end)
-    
-    if executeSuccess then
-        print("✅ Script loaded successfully!")
-        return executeResult
-    else
-        warn("❌ Failed to execute script:", executeResult)
-    end
-else
+if not success then
     warn("❌ Failed to download script:", result)
+    return
 end
+
+if not result or result == "" then
+    warn("❌ Downloaded script is empty!")
+    return
+end
+
+print("✅ Script downloaded successfully! Size:", #result, "bytes")
+print("⚡ Compiling...")
+
+local compiledFunc, compileError = loadstring(result)
+if not compiledFunc then
+    warn("❌ Failed to compile script:", compileError)
+    return
+end
+
+print("✅ Compiled successfully!")
+print("⚡ Executing...")
+
+local executeSuccess, executeResult = pcall(compiledFunc)
+
+if not executeSuccess then
+    warn("❌ Failed to execute script:")
+    warn(executeResult)
+    return
+end
+
+print("✅ Script loaded successfully!")
+return executeResult
