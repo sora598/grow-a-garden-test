@@ -614,6 +614,346 @@ function _.ToolFunction.GetAllTool()
     return tools
 end
 
+-- ========== GUI SYSTEM ==========
+_.GUI = {}
+
+local GUI = {}
+
+function _.GUI.Create()
+    local TweenService = game:GetService("TweenService")
+    
+    -- Create ScreenGui
+    local sg = Instance.new("ScreenGui")
+    sg.Name = "GrowAGardenGUI"
+    sg.ResetOnSpawn = false
+    sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    
+    -- Safe parent to player GUI or fallback
+    local function getGuiParent()
+        if player.PlayerGui then
+            return player.PlayerGui
+        end
+        if type(gethui) == "function" then
+            local success, result = pcall(gethui)
+            if success and result then return result end
+        end
+        return game:GetService("CoreGui")
+    end
+    
+    sg.Parent = getGuiParent()
+    
+    -- Main frame
+    local main = Instance.new("Frame")
+    main.Name = "MainFrame"
+    main.Size = UDim2.new(0, 350, 0, 500)
+    main.Position = UDim2.new(1, -360, 0.5, -250)
+    main.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    main.BorderSizePixel = 0
+    main.Parent = sg
+    
+    Instance.new("UICorner", main).CornerRadius = UDim.new(0, 12)
+    
+    -- Header
+    local header = Instance.new("Frame")
+    header.Name = "Header"
+    header.Size = UDim2.new(1, 0, 0, 45)
+    header.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    header.BorderSizePixel = 0
+    header.Parent = main
+    
+    Instance.new("UICorner", header).CornerRadius = UDim.new(0, 12)
+    
+    -- Title
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.Size = UDim2.new(1, -50, 1, 0)
+    title.Position = UDim2.new(0, 10, 0, 0)
+    title.BackgroundTransparency = 1
+    title.Text = "🌱 Grow a Garden"
+    title.TextColor3 = Color3.fromRGB(100, 255, 150)
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 18
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = header
+    
+    -- Close button
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Name = "CloseButton"
+    closeBtn.Size = UDim2.new(0, 35, 0, 35)
+    closeBtn.Position = UDim2.new(1, -40, 0, 5)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+    closeBtn.Text = "×"
+    closeBtn.TextColor3 = Color3.new(1, 1, 1)
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.TextSize = 24
+    closeBtn.Parent = header
+    
+    Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 8)
+    
+    closeBtn.MouseButton1Click:Connect(function()
+        sg:Destroy()
+    end)
+    
+    -- Content frame
+    local content = Instance.new("ScrollingFrame")
+    content.Name = "Content"
+    content.Size = UDim2.new(1, -20, 1, -65)
+    content.Position = UDim2.new(0, 10, 0, 55)
+    content.BackgroundTransparency = 1
+    content.BorderSizePixel = 0
+    content.ScrollBarThickness = 6
+    content.ScrollBarImageColor3 = Color3.fromRGB(100, 255, 150)
+    content.CanvasSize = UDim2.new(0, 0, 0, 0)
+    content.Parent = main
+    
+    local layout = Instance.new("UIListLayout")
+    layout.Padding = UDim.new(0, 8)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Parent = content
+    
+    -- Auto-resize canvas
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        content.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
+    end)
+    
+    -- Config storage
+    GUI.Config = {
+        ["Auto Collect Eggs"] = false,
+        ["ESP Eggs"] = true,
+        ["Show Pet Info"] = true,
+        ["Auto Hatch"] = false,
+    }
+    
+    -- Create section function
+    local function createSection(name)
+        local section = Instance.new("Frame")
+        section.Name = name
+        section.Size = UDim2.new(1, 0, 0, 35)
+        section.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        section.BorderSizePixel = 0
+        section.Parent = content
+        
+        Instance.new("UICorner", section).CornerRadius = UDim.new(0, 8)
+        
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(1, -10, 1, 0)
+        label.Position = UDim2.new(0, 10, 0, 0)
+        label.BackgroundTransparency = 1
+        label.Text = name
+        label.TextColor3 = Color3.fromRGB(200, 200, 200)
+        label.Font = Enum.Font.GothamBold
+        label.TextSize = 14
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = section
+        
+        return section
+    end
+    
+    -- Create toggle function
+    local function createToggle(name, default)
+        local toggle = Instance.new("Frame")
+        toggle.Name = name
+        toggle.Size = UDim2.new(1, 0, 0, 40)
+        toggle.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+        toggle.BorderSizePixel = 0
+        toggle.Parent = content
+        
+        Instance.new("UICorner", toggle).CornerRadius = UDim.new(0, 8)
+        
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(1, -60, 1, 0)
+        label.Position = UDim2.new(0, 10, 0, 0)
+        label.BackgroundTransparency = 1
+        label.Text = name
+        label.TextColor3 = Color3.fromRGB(220, 220, 220)
+        label.Font = Enum.Font.Gotham
+        label.TextSize = 13
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = toggle
+        
+        local button = Instance.new("TextButton")
+        button.Size = UDim2.new(0, 45, 0, 25)
+        button.Position = UDim2.new(1, -50, 0.5, -12.5)
+        button.BackgroundColor3 = default and Color3.fromRGB(100, 255, 150) or Color3.fromRGB(60, 60, 70)
+        button.Text = default and "ON" or "OFF"
+        button.TextColor3 = Color3.new(1, 1, 1)
+        button.Font = Enum.Font.GothamBold
+        button.TextSize = 11
+        button.Parent = toggle
+        
+        Instance.new("UICorner", button).CornerRadius = UDim.new(0, 6)
+        
+        GUI.Config[name] = default
+        
+        button.MouseButton1Click:Connect(function()
+            GUI.Config[name] = not GUI.Config[name]
+            button.Text = GUI.Config[name] and "ON" or "OFF"
+            button.BackgroundColor3 = GUI.Config[name] and Color3.fromRGB(100, 255, 150) or Color3.fromRGB(60, 60, 70)
+        end)
+        
+        return toggle
+    end
+    
+    -- Create status label
+    local function createStatus()
+        local status = Instance.new("Frame")
+        status.Name = "Status"
+        status.Size = UDim2.new(1, 0, 0, 60)
+        status.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        status.BorderSizePixel = 0
+        status.Parent = content
+        
+        Instance.new("UICorner", status).CornerRadius = UDim.new(0, 8)
+        
+        local label = Instance.new("TextLabel")
+        label.Name = "StatusLabel"
+        label.Size = UDim2.new(1, -20, 1, -10)
+        label.Position = UDim2.new(0, 10, 0, 5)
+        label.BackgroundTransparency = 1
+        label.Text = "Status: Ready\nEggs: 0 | Ready: 0"
+        label.TextColor3 = Color3.fromRGB(150, 150, 150)
+        label.Font = Enum.Font.Code
+        label.TextSize = 12
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.TextYAlignment = Enum.TextYAlignment.Top
+        label.Parent = status
+        
+        GUI.StatusLabel = label
+        
+        return status
+    end
+    
+    -- Build GUI
+    createSection("🥚 Egg Settings")
+    createToggle("Auto Collect Eggs", false)
+    createToggle("ESP Eggs", true)
+    createToggle("Show Pet Info", true)
+    createToggle("Auto Hatch", false)
+    
+    createSection("📊 Status")
+    createStatus()
+    
+    -- Make draggable
+    local dragging = false
+    local dragInput, dragStart, startPos
+    
+    header.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = main.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    header.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    
+    print("✅ GUI created successfully!")
+    return GUI
+end
+
+-- Update status function
+function _.GUI.UpdateStatus(text)
+    if GUI.StatusLabel then
+        GUI.StatusLabel.Text = text
+    end
+end
+
+-- ========== EGG ESP SYSTEM ==========
+_.EggESP = {}
+
+function _.EggESP.Start()
+    print("🔍 Starting Egg ESP...")
+    
+    task.spawn(function()
+        while true do
+            if GUI.Config and GUI.Config["ESP Eggs"] then
+                local objectsFolder = _.GetFarmPath("Objects_Physical")
+                if objectsFolder then
+                    local savedData = _.DataClient.GetSaved_Data()
+                    
+                    for _, obj in ipairs(objectsFolder:GetChildren()) do
+                        if obj:GetAttribute("OWNER") == player.Name and obj.Name == "PetEgg" then
+                            local uuid = obj:GetAttribute("OBJECT_UUID")
+                            local ready = obj:GetAttribute("READY")
+                            local timeToHatch = obj:GetAttribute("TimeToHatch")
+                            
+                            -- Create or update ESP
+                            if not obj:FindFirstChild("ESP") then
+                                _.ESP.CreateESP(obj, {
+                                    Color = Color3.fromRGB(0, 255, 255),
+                                    Text = "Loading...",
+                                    Enabled = true
+                                })
+                            end
+                            
+                            -- Update ESP text
+                            local esp = obj:FindFirstChild("ESP")
+                            if esp then
+                                local billboard = esp:FindFirstChild("ESP")
+                                local textLabel = billboard and billboard:FindFirstChildWhichIsA("BillboardGui")
+                                textLabel = textLabel and textLabel:FindFirstChild("TextLabel")
+                                
+                                if textLabel then
+                                    local eggName = obj:GetAttribute("EggName") or "Unknown Egg"
+                                    
+                                    if ready then
+                                        -- Show pet info
+                                        if savedData and uuid and GUI.Config["Show Pet Info"] then
+                                            local eggData = savedData[uuid]
+                                            if eggData and eggData.Data then
+                                                local petType = eggData.Data.Type or "Unknown"
+                                                local baseWeight = eggData.Data.BaseWeight or 1
+                                                local weight = _.Calculator.CurrentWeight(baseWeight, 1)
+                                                
+                                                textLabel.Text = string.format("%s\n%.2f KG", petType, weight)
+                                                textLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                                            else
+                                                textLabel.Text = "READY: " .. eggName
+                                                textLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                                            end
+                                        else
+                                            textLabel.Text = "READY: " .. eggName
+                                            textLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                                        end
+                                    elseif timeToHatch and timeToHatch > 0 then
+                                        -- Show timer
+                                        local mins = math.floor(timeToHatch / 60)
+                                        local secs = math.floor(timeToHatch % 60)
+                                        textLabel.Text = string.format("%s\n%d:%02d", eggName, mins, secs)
+                                        textLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
+                                    else
+                                        textLabel.Text = eggName
+                                        textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            
+            task.wait(2)
+        end
+    end)
+end
+
 -- ========== INITIALIZATION ==========
 function _.Initialize()
     print("🌱 Initializing Grow a Garden Clean Implementation...")
@@ -633,6 +973,12 @@ function _.Initialize()
     else
         warn("⚠️ Failed to load player data")
     end
+    
+    -- Create GUI
+    GUI = _.GUI.Create()
+    
+    -- Start Egg ESP
+    _.EggESP.Start()
     
     print("✅ Initialization complete!")
 end
