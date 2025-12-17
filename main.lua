@@ -93,6 +93,67 @@ function Log(...)
     end
 end
 
+-- ========== DATA ACCESS FUNCTIONS ==========
+local DataAccess = {}
+
+-- Access saved game data
+function DataAccess.getSavedData()
+    local success, result = pcall(function()
+        -- Try to access player's replicated data
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local playerData = ReplicatedStorage:FindFirstChild("PlayerData")
+        if playerData then
+            local myData = playerData:FindFirstChild(player.Name)
+            if myData and myData:FindFirstChild("SaveSlots") then
+                local saveSlots = myData.SaveSlots
+                local selectedSlot = saveSlots:FindFirstChild("SelectedSlot")
+                if selectedSlot and selectedSlot.Value then
+                    local allSlots = saveSlots:FindFirstChild("AllSlots")
+                    if allSlots then
+                        local slot = allSlots:FindFirstChild(tostring(selectedSlot.Value))
+                        if slot and slot:FindFirstChild("SavedObjects") then
+                            return slot.SavedObjects:GetChildren()
+                        end
+                    end
+                end
+            end
+        end
+        return nil
+    end)
+    return success and result or nil
+end
+
+-- Get egg data by UUID
+function DataAccess.getEggDataByUUID(uuid)
+    if not uuid or uuid == "" then return nil end
+    
+    local savedData = DataAccess.getSavedData()
+    if not savedData then return nil end
+    
+    for _, obj in ipairs(savedData) do
+        if obj.Name == uuid and obj:FindFirstChild("Data") then
+            local data = obj.Data
+            local petType = data:FindFirstChild("Type")
+            local baseWeight = data:FindFirstChild("BaseWeight")
+            
+            if petType and baseWeight then
+                return {
+                    Type = petType.Value,
+                    BaseWeight = baseWeight.Value
+                }
+            end
+        end
+    end
+    return nil
+end
+
+-- Calculate current weight based on base weight and level
+function DataAccess.calculateWeight(baseWeight, level)
+    if type(baseWeight) ~= "number" or type(level) ~= "number" then return 0 end
+    level = math.min(level, 100)
+    return baseWeight + (baseWeight * 0.1 * level)
+end
+
 -- ========== EGG DETECTION & CHECKING ==========
 local EggSystem = {}
 
@@ -658,15 +719,28 @@ local function _updateESPForEgg(egg)
     end
 
     if ready then
-        -- Ready eggs: Show "READY: EggName" in green
-        if contentText then
-            label.Text = "READY: " .. tostring(contentText)
+        -- Ready eggs: Get pet info from saved data
+        local uuid = egg:GetAttribute("OBJECT_UUID")
+        local petData = uuid and DataAccess.getEggDataByUUID(uuid)
+        
+        if petData and petData.Type and petData.BaseWeight then
+            local weight = DataAccess.calculateWeight(petData.BaseWeight, 1)
+            local weightText = string.format("%.2f KG", weight)
+            
+            -- Show: Pet name (colored) + weight in yellow
+            label.Text = string.format("%s\n%s", petData.Type, weightText)
+            label.TextColor3 = EggESP.READY_COLOR
         else
-            label.Text = "READY"
+            -- Fallback if we can't get pet data
+            if contentText then
+                label.Text = "READY: " .. tostring(contentText)
+            else
+                label.Text = "READY"
+            end
+            label.TextColor3 = EggESP.READY_COLOR
         end
-        label.TextColor3 = EggESP.READY_COLOR
     elseif type(timerVal) == "number" and timerVal > 0 then
-        -- Eggs with timer: Show name in cyan, timer in yellow below
+        -- Eggs with timer: Show name in cyan, timer below
         local eggName = contentText or "Egg"
         label.Text = string.format("%s\n%s", tostring(eggName), formatTime(timerVal))
         label.TextColor3 = EggESP.NAME_COLOR
