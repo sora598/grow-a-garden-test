@@ -375,14 +375,28 @@ function EggSystem.dumpEggStructure()
     local egg = eggs[1]
     print("🥚 EGG STRUCTURE DUMP: " .. egg.Name)
     print("=" .. string.rep("=", 60))
-    
-    local function dump(obj, depth, maxDepth)
-        if depth > (maxDepth or 5) then return end
+    local dumpText = EggSystem.getDumpText(egg, 4)
+    -- Print to console for backward compatibility
+    for _, line in ipairs(dumpText) do print(line) end
+    return table.concat(dumpText, "\n")
+end
+
+-- Return dump as table of lines or as string when joined
+function EggSystem.getDumpText(egg, maxDepth)
+    if not egg then return {"<no egg>"} end
+    maxDepth = maxDepth or 4
+    local out = {}
+
+    local function push(s) table.insert(out, s) end
+
+    push("🥚 EGG STRUCTURE DUMP: " .. tostring(egg.Name))
+    push(string.rep("=", 66))
+
+    local function dump(obj, depth)
+        if depth > maxDepth then return end
         local indent = string.rep("  ", depth)
-        
-        local info = indent .. "├─ " .. obj.Name .. " (" .. obj.ClassName .. ")"
-        
-        -- Show values for value types
+        local info = indent .. "├─ " .. tostring(obj.Name) .. " (" .. tostring(obj.ClassName) .. ")"
+
         if obj:IsA("ValueBase") then
             local ok, val = pcall(function() return obj.Value end)
             info = info .. " = " .. tostring(ok and val or "<?>")
@@ -390,31 +404,45 @@ function EggSystem.dumpEggStructure()
             local ok, txt = pcall(function() return obj.Text end)
             info = info .. " = \"" .. tostring(ok and txt or "<?>") .. "\""
         end
-        
-        print(info)
-        
-        -- Show attributes
-        local attrs = obj:GetAttributes()
-        if next(attrs) then
+
+        push(info)
+
+        local okAttrs, attrs = pcall(function() return obj:GetAttributes() end)
+        if okAttrs and attrs and next(attrs) then
             for k, v in pairs(attrs) do
-                print(indent .. "   📌 " .. k .. " = " .. tostring(v))
+                push(indent .. "   📌 " .. tostring(k) .. " = " .. tostring(v))
             end
         end
-        
-        -- Recurse
+
         for _, child in pairs(obj:GetChildren()) do
-            dump(child, depth + 1, maxDepth)
+            dump(child, depth + 1)
         end
     end
-    
-    dump(egg, 0, 4)
-    
-    -- Also dump parent
+
+    dump(egg, 0)
+
     if egg.Parent then
-        print("\n📂 PARENT STRUCTURE: " .. egg.Parent.Name)
-        print("=" .. string.rep("=", 60))
-        dump(egg.Parent, 0, 3)
+        push("\n📂 PARENT STRUCTURE: " .. tostring(egg.Parent.Name))
+        push(string.rep("=", 66))
+        local function dumpParent(obj, depth)
+            if depth > 3 then return end
+            local indent = string.rep("  ", depth)
+            local info = indent .. "├─ " .. tostring(obj.Name) .. " (" .. tostring(obj.ClassName) .. ")"
+            push(info)
+            local okAttrs, attrs = pcall(function() return obj:GetAttributes() end)
+            if okAttrs and attrs and next(attrs) then
+                for k, v in pairs(attrs) do
+                    push(indent .. "   📌 " .. tostring(k) .. " = " .. tostring(v))
+                end
+            end
+            for _, child in pairs(obj:GetChildren()) do
+                dumpParent(child, depth + 1)
+            end
+        end
+        dumpParent(egg.Parent, 0)
     end
+
+    return out
 end
 
 -- Find candidate content locations for a given egg
@@ -881,6 +909,109 @@ local function buildGUI()
         for i, egg in pairs(eggReport) do
             Log(string.format("  [%d] %s | Timer: %s | Content: %s", i, egg.name, tostring(egg.timerValue), egg.content or "N/A"))
         end
+    end)
+
+    -- Dump Egg button
+    local db = Instance.new("TextButton")
+    db.Size = UDim2.new(1, 0, 0, 28)
+    db.BackgroundColor3 = Color3.fromRGB(120, 90, 60)
+    db.Text = "📝 Dump Egg"
+    db.TextColor3 = Color3.fromRGB(255, 255, 255)
+    db.Font = Enum.Font.GothamBold
+    db.TextSize = 11
+    db.LayoutOrder = 8
+    db.Parent = content
+    Instance.new("UICorner", db).CornerRadius = UDim.new(0, 5)
+
+    db.MouseButton1Click:Connect(function()
+        local eggs = EggSystem.findEggs(1)
+        if #eggs == 0 then
+            Log("No eggs found to dump")
+            return
+        end
+        local dumpStr = nil
+        local ok, res = pcall(function() return EggSystem.getDumpText(eggs[1], 6) end)
+        if ok and type(res) == "table" then
+            dumpStr = table.concat(res, "\n")
+        else
+            dumpStr = "<failed to get dump>"
+        end
+
+        -- Create modal popup
+        local modal = Instance.new("Frame")
+        modal.Size = UDim2.new(0, 520, 0, 360)
+        modal.Position = UDim2.new(0.5, -260, 0.5, -180)
+        modal.BackgroundColor3 = Color3.fromRGB(15,15,15)
+        modal.BorderSizePixel = 0
+        modal.Parent = sg
+        Instance.new("UICorner", modal).CornerRadius = UDim.new(0,8)
+
+        local header = Instance.new("Frame")
+        header.Size = UDim2.new(1,0,0,30)
+        header.BackgroundColor3 = Color3.fromRGB(35,35,35)
+        header.Parent = modal
+        Instance.new("UICorner", header).CornerRadius = UDim.new(0,6)
+
+        local htxt = Instance.new("TextLabel")
+        htxt.Size = UDim2.new(1,-80,1,0)
+        htxt.Position = UDim2.new(0,8,0,0)
+        htxt.BackgroundTransparency = 1
+        htxt.Text = "Egg Structure Dump"
+        htxt.TextColor3 = Color3.fromRGB(230,230,230)
+        htxt.Font = Enum.Font.GothamBold
+        htxt.TextSize = 14
+        htxt.TextXAlignment = Enum.TextXAlignment.Left
+        htxt.Parent = header
+
+        local closeBtn = Instance.new("TextButton")
+        closeBtn.Size = UDim2.new(0,70,0,22)
+        closeBtn.Position = UDim2.new(1,-78,0,4)
+        closeBtn.BackgroundColor3 = Color3.fromRGB(180,50,50)
+        closeBtn.Text = "Close"
+        closeBtn.Font = Enum.Font.GothamBold
+        closeBtn.TextSize = 12
+        closeBtn.Parent = header
+        Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0,4)
+
+        local textbox = Instance.new("TextBox")
+        textbox.Size = UDim2.new(1,-14,1,-44)
+        textbox.Position = UDim2.new(0,7,0,36)
+        textbox.BackgroundColor3 = Color3.fromRGB(20,20,20)
+        textbox.TextColor3 = Color3.fromRGB(220,220,220)
+        textbox.Font = Enum.Font.Code
+        textbox.TextSize = 14
+        textbox.ClearTextOnFocus = false
+        textbox.TextEditable = true
+        textbox.MultiLine = true
+        textbox.TextWrapped = false
+        textbox.Text = dumpStr or ""
+        textbox.Parent = modal
+        Instance.new("UICorner", textbox).CornerRadius = UDim.new(0,4)
+
+        local copyBtn = Instance.new("TextButton")
+        copyBtn.Size = UDim2.new(0,90,0,22)
+        copyBtn.Position = UDim2.new(0,8,1,-28)
+        copyBtn.BackgroundColor3 = Color3.fromRGB(60,150,60)
+        copyBtn.Text = "Copy"
+        copyBtn.Font = Enum.Font.GothamBold
+        copyBtn.TextSize = 12
+        copyBtn.Parent = modal
+        Instance.new("UICorner", copyBtn).CornerRadius = UDim.new(0,4)
+
+        copyBtn.MouseButton1Click:Connect(function()
+            local okc, err = pcall(function()
+                if setclipboard then setclipboard(textbox.Text) end
+            end)
+            if okc then
+                Log("Dump copied to clipboard (if supported)")
+            else
+                Log("Copy failed: your executor may not support setclipboard")
+            end
+        end)
+
+        closeBtn.MouseButton1Click:Connect(function()
+            pcall(function() modal:Destroy() end)
+        end)
     end)
     
     -- Console display (in-GUI)
