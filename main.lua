@@ -59,8 +59,122 @@ local State = {
         items = 0,
         water = 0,
         uptime = 0,
-    }
+    },
+    eggs = {}
 }
+
+-- ========== EGG DETECTION & CHECKING ==========
+local EggSystem = {}
+
+function EggSystem.findEggs()
+    local eggs = {}
+    local workspace = game:GetService("Workspace")
+    
+    -- Search for egg models in workspace
+    local function searchForEggs(parent)
+        for _, obj in pairs(parent:GetChildren()) do
+            local name = obj.Name:lower()
+            
+            -- Look for objects named "egg", "eggs", or containing egg-like properties
+            if name:match("egg") or (obj:FindFirstChild("Timer") or obj:FindFirstChild("timer")) then
+                table.insert(eggs, obj)
+            end
+            
+            -- Recurse into children
+            if obj:IsA("Model") or obj:IsA("Folder") then
+                searchForEggs(obj)
+            end
+        end
+    end
+    
+    searchForEggs(workspace)
+    State.eggs = eggs
+    return eggs
+end
+
+function EggSystem.getEggInfo(egg)
+    if not egg then return nil end
+    
+    local info = {
+        name = egg.Name,
+        position = egg:IsA("BasePart") and egg.Position or (egg.PrimaryPart and egg.PrimaryPart.Position) or Vector3.new(0, 0, 0),
+        timerValue = nil,
+        timerComplete = false,
+        content = nil,
+        properties = {}
+    }
+    
+    -- Try to find timer
+    local timer = egg:FindFirstChild("Timer") or egg:FindFirstChild("timer") or egg:FindFirstChild("Hatch_Timer")
+    if timer then
+        if timer:IsA("NumberValue") or timer:IsA("IntValue") then
+            info.timerValue = timer.Value
+            info.timerComplete = timer.Value <= 0
+        elseif timer:IsA("TextLabel") or timer:IsA("TextBox") then
+            info.timerValue = tonumber(timer.Text) or 0
+        end
+    end
+    
+    -- Try to find content/type
+    local content = egg:FindFirstChild("Content") or egg:FindFirstChild("content") or egg:FindFirstChild("Type") or egg:FindFirstChild("type")
+    if content then
+        if content:IsA("StringValue") then
+            info.content = content.Value
+        elseif content:IsA("TextLabel") then
+            info.content = content.Text
+        end
+    end
+    
+    -- Store all custom properties
+    for _, child in pairs(egg:GetChildren()) do
+        if child:IsA("NumberValue") or child:IsA("StringValue") or child:IsA("BoolValue") then
+            info.properties[child.Name] = child.Value
+        end
+    end
+    
+    return info
+end
+
+function EggSystem.checkAllEggs()
+    local eggs = EggSystem.findEggs()
+    local report = {}
+    
+    for _, egg in pairs(eggs) do
+        local eggInfo = EggSystem.getEggInfo(egg)
+        if eggInfo then
+            table.insert(report, eggInfo)
+            if eggInfo.timerComplete then
+                print(string.format("🥚 EGG READY: %s | Content: %s", eggInfo.name, eggInfo.content or "Unknown"))
+            end
+        end
+    end
+    
+    return report
+end
+
+function EggSystem.watchEggs(callback)
+    local lastStates = {}
+    
+    task.spawn(function()
+        while State.running do
+            local eggs = EggSystem.findEggs()
+            
+            for i, egg in pairs(eggs) do
+                local info = EggSystem.getEggInfo(egg)
+                local lastState = lastStates[egg]
+                
+                if lastState and lastState.timerComplete == false and info.timerComplete == true then
+                    print("⏰ EGG TIMER COMPLETED!")
+                    if callback then callback(egg, info) end
+                end
+                
+                lastStates[egg] = info
+            end
+            
+            task.wait(1)
+        end
+    end)
+end
 
 -- ========== GUI BUILDER MODULE ==========
 local function buildGUI()
@@ -249,12 +363,32 @@ local function buildGUI()
     addSlider("Boost %", "LuckBoostPercent", 0, 500, 50, "%", 5)
     addSlider("Max Cap", "LuckCapMax", 0, 1, 0.80, "", 6)
     
+    -- Egg checker button
+    local eb = Instance.new("TextButton")
+    eb.Size = UDim2.new(1, 0, 0, 28)
+    eb.BackgroundColor3 = Color3.fromRGB(100, 100, 180)
+    eb.Text = "🥚 Check Eggs"
+    eb.TextColor3 = Color3.fromRGB(255, 255, 255)
+    eb.Font = Enum.Font.GothamBold
+    eb.TextSize = 11
+    eb.LayoutOrder = 7
+    eb.Parent = content
+    Instance.new("UICorner", eb).CornerRadius = UDim.new(0, 5)
+    
+    eb.MouseButton1Click:Connect(function()
+        local eggReport = EggSystem.checkAllEggs()
+        print(string.format("🔍 Found %d eggs:", #eggReport))
+        for i, egg in pairs(eggReport) do
+            print(string.format("  [%d] %s | Timer: %s | Content: %s", i, egg.name, tostring(egg.timerValue), egg.content or "N/A"))
+        end
+    end)
+    
     -- Status display
     local sf = Instance.new("Frame")
     sf.Size = UDim2.new(1, 0, 0, 70)
     sf.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     sf.BorderSizePixel = 0
-    sf.LayoutOrder = 7
+    sf.LayoutOrder = 8
     sf.Parent = content
     Instance.new("UICorner", sf).CornerRadius = UDim.new(0, 5)
     
@@ -278,7 +412,7 @@ local function buildGUI()
     sb.TextColor3 = Color3.fromRGB(255, 255, 255)
     sb.Font = Enum.Font.GothamBold
     sb.TextSize = 12
-    sb.LayoutOrder = 8
+    sb.LayoutOrder = 9
     sb.Parent = content
     Instance.new("UICorner", sb).CornerRadius = UDim.new(0, 5)
     
@@ -347,6 +481,7 @@ local function buildGUI()
         main = main,
         state = State,
         config = Config,
+        eggSystem = EggSystem,
     }
 end
 
@@ -354,6 +489,12 @@ end
 print("✨ Starting GUI...")
 local GUI = buildGUI()
 
+-- Start egg watcher (checks eggs every second when running)
+EggSystem.watchEggs(function(egg, info)
+    print(string.format("🎉 Egg hatched: %s -> %s", info.name, info.content or "Unknown"))
+end)
+
 print("✓ Grow a Garden loaded!")
 print("✓ GUI: Bottom-right corner")
+print("✓ Egg system: Active")
 print("✓ All systems ready")
