@@ -3,6 +3,9 @@
 
 print("🌱 Initializing Grow a Garden...")
 
+-- Version
+local VERSION = "v0.8"
+
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
@@ -706,7 +709,7 @@ local function buildGUI()
     title.Size = UDim2.new(1, -70, 1, 0)
     title.Position = UDim2.new(0, 8, 0, 0)
     title.BackgroundTransparency = 1
-    title.Text = "🌱 Control"
+    title.Text = string.format("🌱 Control — %s", VERSION)
     title.TextColor3 = Color3.fromRGB(255, 255, 255)
     title.Font = Enum.Font.GothamBold
     title.TextSize = 13
@@ -1020,12 +1023,16 @@ local function buildGUI()
         appendConsole = appendConsoleLine,
         consoleFrame = consoleFrame,
         consoleLayout = consoleLayout,
+        version = VERSION,
     }
 end
 
 -- ========== MAIN EXECUTION ==========
 print("✨ Starting GUI...")
 local GUI = buildGUI()
+
+-- Print version to log/GUI
+Log(string.format("✓ Grow a Garden loaded — version %s", VERSION))
 
 -- Start egg watcher (checks eggs every second when running)
 EggSystem.watchEggs(function(egg, info)

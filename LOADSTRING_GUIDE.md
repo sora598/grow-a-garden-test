@@ -2,6 +2,8 @@
 
 Quick instructions to load the script and useful runtime commands.
 
+Current version: v0.8
+
 ## Quick load
 Use this one-liner to fetch and run the latest `main.lua` from the repo:
 
