@@ -261,10 +261,10 @@ function EggSystem.dumpEggStructure()
         -- Show values for value types
         if obj:IsA("ValueBase") then
             local ok, val = pcall(function() return obj.Value end)
-            info = info .. " = " .. tostring(ok and val or "<?>"
+            info = info .. " = " .. tostring(ok and val or "<?>")
         elseif obj:IsA("TextLabel") or obj:IsA("TextBox") then
             local ok, txt = pcall(function() return obj.Text end)
-            info = info .. " = \"" .. tostring(ok and txt or "<?>"
+            info = info .. " = \"" .. tostring(ok and txt or "<?>") .. "\""
         end
         
         print(info)
