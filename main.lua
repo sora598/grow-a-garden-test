@@ -331,7 +331,6 @@ function EggSystem.getEggInfo(egg)
             end
         end
     end
-    end
 
     -- Store safe custom properties from egg
     for _, child in pairs(egg:GetChildren()) do
@@ -340,9 +339,6 @@ function EggSystem.getEggInfo(egg)
             if ok then info.properties[child.Name] = v end
         end
     end
-
-    return info
-end
 
 function EggSystem.checkAllEggs()
     local eggs = EggSystem.findEggs()
@@ -749,7 +745,10 @@ local function buildGUI()
     local sg = Instance.new("ScreenGui")
     sg.Name = "GrowAGardenMain"
     sg.ResetOnSpawn = false
-    pcall(function() sg.Parent = player.PlayerGui or gethui() or game.CoreGui end)
+    pcall(function() 
+        local safeGetHui = (type(gethui) == "function" and pcall(gethui)) and gethui() or nil
+        sg.Parent = player.PlayerGui or safeGetHui or game.CoreGui 
+    end)
     
     local main = Instance.new("Frame")
     main.Size = UDim2.new(0, 280, 0, 320)
