@@ -587,6 +587,7 @@ local EggESP = {}
 EggESP.UPDATE_INTERVAL = 2
 EggESP.READY_COLOR = Color3.fromRGB(0, 255, 0)
 EggESP.TIMER_COLOR = Color3.fromRGB(255, 200, 0)
+EggESP.NAME_COLOR = Color3.fromRGB(0, 255, 255) -- Cyan for egg name
 
 local function _createESP(egg)
     if not egg or not egg:IsA("Instance") then return nil end
@@ -603,8 +604,8 @@ local function _createESP(egg)
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "Billboard"
     billboard.Adornee = adornee
-    billboard.Size = UDim2.new(0, 140, 0, 40)
-    billboard.StudsOffset = Vector3.new(0, 2, 0)
+    billboard.Size = UDim2.new(0, 200, 0, 80)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
     billboard.AlwaysOnTop = true
     billboard.Parent = folder
 
@@ -615,9 +616,10 @@ local function _createESP(egg)
     text.TextScaled = false
     text.Font = Enum.Font.GothamBold
     text.TextStrokeTransparency = 0
-    text.TextColor3 = EggESP.TIMER_COLOR
-    text.TextSize = 14
+    text.TextColor3 = EggESP.NAME_COLOR
+    text.TextSize = 16
     text.Text = "Loading..."
+    text.TextYAlignment = Enum.TextYAlignment.Top
     text.Parent = billboard
 
     -- make billboard readable only within a certain range
@@ -647,7 +649,16 @@ local function _updateESPForEgg(egg)
     local ready = egg:GetAttribute("READY") or egg:GetAttribute("IsReady") or egg:GetAttribute("Ready") or (info and info.timerValue and info.timerValue <= 0)
     local timerVal = (info and info.timerValue) or egg:GetAttribute("TimeToHatch") or egg:GetAttribute("TimeLeft") or egg:GetAttribute("Timer")
 
+    -- Format timer as MM:SS
+    local function formatTime(seconds)
+        if type(seconds) ~= "number" or seconds <= 0 then return "00:00" end
+        local mins = math.floor(seconds / 60)
+        local secs = math.floor(seconds % 60)
+        return string.format("%d:%02d", mins, secs)
+    end
+
     if ready then
+        -- Ready eggs: Show "READY: EggName" in green
         if contentText then
             label.Text = "READY: " .. tostring(contentText)
         else
@@ -655,19 +666,18 @@ local function _updateESPForEgg(egg)
         end
         label.TextColor3 = EggESP.READY_COLOR
     elseif type(timerVal) == "number" and timerVal > 0 then
-        if contentText then
-            label.Text = string.format("⏳ %ds | %s", math.ceil(timerVal), tostring(contentText))
-        else
-            label.Text = string.format("⏳ %ds", math.ceil(timerVal))
-        end
-        label.TextColor3 = EggESP.TIMER_COLOR
+        -- Eggs with timer: Show name in cyan, timer in yellow below
+        local eggName = contentText or "Egg"
+        label.Text = string.format("%s\n%s", tostring(eggName), formatTime(timerVal))
+        label.TextColor3 = EggESP.NAME_COLOR
     else
+        -- Unknown state: just show name
         if contentText then
             label.Text = tostring(contentText)
         else
             label.Text = "..."
         end
-        label.TextColor3 = EggESP.TIMER_COLOR
+        label.TextColor3 = EggESP.NAME_COLOR
     end
 
     -- Adjust label size by distance to player
@@ -677,11 +687,11 @@ local function _updateESPForEgg(egg)
             local hrp = player.Character.HumanoidRootPart
             local succ, dist = pcall(function() return (hrp.Position - pos).Magnitude end)
             if succ and type(dist) == "number" then
-                local size = math.floor(math.clamp(24 - dist * 0.06, 10, 24))
+                local size = math.floor(math.clamp(28 - dist * 0.08, 12, 28))
                 pcall(function() label.TextSize = size end)
             end
         else
-            pcall(function() label.TextSize = 14 end)
+            pcall(function() label.TextSize = 16 end)
         end
     end
 end
