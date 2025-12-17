@@ -69,76 +69,113 @@ local EggSystem = {}
 function EggSystem.findEggs()
     local eggs = {}
     local workspace = game:GetService("Workspace")
-    
-    -- Search for egg models in workspace
+
+    -- Common candidate roots where eggs are often placed
+    local roots = { workspace }
+    local candidates = { "Garden", "PhysicalEggsShop", "PhysicalEggs", "Eggs", "PhysicalGarden" }
+    for _, name in ipairs(candidates) do
+        local r = workspace:FindFirstChild(name)
+        if r then table.insert(roots, r) end
+    end
+
     local function searchForEggs(parent)
         for _, obj in pairs(parent:GetChildren()) do
-            local name = obj.Name:lower()
-            
-            -- Look for objects named "egg", "eggs", or containing egg-like properties
-            if name:match("egg") or (obj:FindFirstChild("Timer") or obj:FindFirstChild("timer")) then
+            local ok, name = pcall(function() return obj.Name end)
+            name = (ok and tostring(name) or ""):lower()
+
+            -- Look for objects named "egg" or that contain a Timer child
+            if name:match("egg") or obj:FindFirstChild("Timer") or obj:FindFirstChild("timer") then
                 table.insert(eggs, obj)
             end
-            
-            -- Recurse into children
+
             if obj:IsA("Model") or obj:IsA("Folder") then
                 searchForEggs(obj)
             end
         end
     end
-    
-    searchForEggs(workspace)
+
+    for _, root in ipairs(roots) do
+        if root and root:IsA("Instance") then
+            pcall(function() searchForEggs(root) end)
+        end
+    end
+
     State.eggs = eggs
     return eggs
 end
 
 function EggSystem.getEggInfo(egg)
     if not egg then return nil end
-    
+
     local info = {
-        name = egg.Name,
-        position = egg:IsA("BasePart") and egg.Position or (egg.PrimaryPart and egg.PrimaryPart.Position) or Vector3.new(0, 0, 0),
+        name = tostring(egg.Name or "<unknown>"),
+        position = Vector3.new(0,0,0),
         timerValue = nil,
         timerComplete = false,
         content = nil,
         properties = {}
     }
-    
+
+    -- Safe position extraction: only query PrimaryPart for Models, never index PrimaryPart on Folders
+    if egg:IsA("BasePart") then
+        local ok, pos = pcall(function() return egg.Position end)
+        if ok and pos then info.position = pos end
+    elseif egg:IsA("Model") then
+        local ok, pp = pcall(function() return egg.PrimaryPart end)
+        if ok and pp and pp:IsA("BasePart") then
+            local ok2, pos2 = pcall(function() return pp.Position end)
+            if ok2 and pos2 then info.position = pos2 end
+        else
+            -- Try pivot as fallback
+            local ok3, pivot = pcall(function() return egg:GetPivot().Position end)
+            if ok3 and pivot then info.position = pivot end
+        end
+    end
+
     -- Try to find timer
     local timer = egg:FindFirstChild("Timer") or egg:FindFirstChild("timer") or egg:FindFirstChild("Hatch_Timer")
     if timer then
         if timer:IsA("NumberValue") or timer:IsA("IntValue") then
-            info.timerValue = timer.Value
-            info.timerComplete = timer.Value <= 0
-        elseif timer:IsA("TextLabel") or timer:IsA("TextBox") then
-            info.timerValue = tonumber(timer.Text) or 0
+            local ok, v = pcall(function() return timer.Value end)
+            if ok then
+                info.timerValue = v
+                info.timerComplete = (type(v) == "number" and v <= 0) or false
+            end
+        elseif timer:IsA("StringValue") or timer:IsA("TextLabel") or timer:IsA("TextBox") then
+            local ok, txt = pcall(function() return timer.Value or timer.Text end)
+            local num = tonumber(ok and txt)
+            info.timerValue = num or tonumber(txt) or tostring(txt)
+            info.timerComplete = (type(info.timerValue) == "number" and info.timerValue <= 0) or false
         end
     end
-    
+
     -- Try to find content/type
     local content = egg:FindFirstChild("Content") or egg:FindFirstChild("content") or egg:FindFirstChild("Type") or egg:FindFirstChild("type")
     if content then
         if content:IsA("StringValue") then
-            info.content = content.Value
-        elseif content:IsA("TextLabel") then
-            info.content = content.Text
+            local ok, v = pcall(function() return content.Value end)
+            if ok then info.content = v end
+        elseif content:IsA("TextLabel") or content:IsA("TextBox") then
+            local ok, v = pcall(function() return content.Text end)
+            if ok then info.content = v end
         end
     end
-    
-    -- Store all custom properties
+
+    -- Store safe custom properties
     for _, child in pairs(egg:GetChildren()) do
         if child:IsA("NumberValue") or child:IsA("StringValue") or child:IsA("BoolValue") then
-            info.properties[child.Name] = child.Value
+            local ok, v = pcall(function() return child.Value end)
+            if ok then info.properties[child.Name] = v end
         end
     end
-    
+
     return info
 end
 
 function EggSystem.checkAllEggs()
     local eggs = EggSystem.findEggs()
     local report = {}
-    
+
     for _, egg in pairs(eggs) do
         local eggInfo = EggSystem.getEggInfo(egg)
         if eggInfo then
@@ -148,29 +185,35 @@ function EggSystem.checkAllEggs()
             end
         end
     end
-    
+
     return report
 end
 
 function EggSystem.watchEggs(callback)
     local lastStates = {}
-    
+
     task.spawn(function()
-        while State.running do
+        while true do
+            -- Only watch while running
+            if not State.running then
+                task.wait(1)
+                continue
+            end
+
             local eggs = EggSystem.findEggs()
-            
+
             for i, egg in pairs(eggs) do
                 local info = EggSystem.getEggInfo(egg)
                 local lastState = lastStates[egg]
-                
-                if lastState and lastState.timerComplete == false and info.timerComplete == true then
+
+                if lastState and lastState.timerComplete == false and info and info.timerComplete == true then
                     print("⏰ EGG TIMER COMPLETED!")
-                    if callback then callback(egg, info) end
+                    if callback then pcall(callback, egg, info) end
                 end
-                
+
                 lastStates[egg] = info
             end
-            
+
             task.wait(1)
         end
     end)
