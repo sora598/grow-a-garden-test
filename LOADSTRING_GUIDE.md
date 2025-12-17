@@ -2,20 +2,27 @@
 
 Quick instructions to load the script and useful runtime commands.
 
-Current version: v0.8
+Current version: v0.9 (Clean Implementation)
 
-## Quick load
-Use this one-liner to fetch and run the latest `main.lua` from the repo:
+## Quick load (Recommended)
+Use this one-liner to fetch and run the latest clean implementation:
 
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/sora598/grow-a-garden-test/main/main.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/sora598/grow-a-garden-test/main/loader.lua"))()
+```
+
+## Alternative: Direct Load
+Load clean_implementation.lua directly:
+
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/sora598/grow-a-garden-test/main/clean_implementation.lua"))()
 ```
 
 ## Safer load (compile-check)
 This checks for compile errors before executing:
 
 ```lua
-local src = game:HttpGet("https://raw.githubusercontent.com/sora598/grow-a-garden-test/main/main.lua")
+local src = game:HttpGet("https://raw.githubusercontent.com/sora598/grow-a-garden-test/main/clean_implementation.lua")
 local fn, err = loadstring(src)
 if not fn then
     warn("Compile error loading Grow a Garden:", err)
@@ -23,6 +30,26 @@ else
     pcall(fn)
 end
 ```
+
+## What it does
+- 🎨 Creates modern draggable GUI at bottom-right
+- 🥚 Starts Egg ESP system with timers and pet info
+- 📊 Shows real-time status updates
+- 🔧 Provides toggles for all features
+- ✨ Loads all modules automatically
+
+## Features
+- **Egg ESP**: Shows egg names, hatching timers (MM:SS), and pet info when ready
+- **Pet Info Display**: Shows pet name + weight (e.g., "Ostrich 0.98 KG") for ready eggs
+- **Data Access**: Uses DataService module to read SavedObjects (same as obfuscated script)
+- **Calculator**: Weight calculations, mutation/variant multipliers
+- **Collection System**: Plant/fruit collection with filters
+- **Tool Functions**: Equip/check tools with type support
+
+## Requirements
+- Roblox executor with HttpGet and loadstring support
+- Internet connection
+- Game: Grow a Garden
 
 ## Debug loader
 To run the debug scanner:
