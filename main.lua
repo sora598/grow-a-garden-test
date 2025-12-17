@@ -299,12 +299,38 @@ function EggSystem.getEggInfo(egg)
         elseif content:IsA("TextLabel") or content:IsA("TextBox") then
             local ok, v = pcall(function() return content.Text end)
             if ok then info.content = v end
-        elseif content:IsA("ObjectValue") or content:IsA("Instance") then
+        elseif content:IsA("ObjectValue") then
             local ok, val = pcall(function() return content.Value end)
             if ok and val then
                 info.content = tostring((type(val) == "table" and val.Name) or (typeof(val) == "Instance" and val.Name) or tostring(val))
             end
+        elseif content:IsA("Model") or content:IsA("Folder") or content:IsA("BasePart") then
+            -- If the content candidate is an object (e.g. a child Model named "Common Egg"), use its name
+            info.content = tostring(content.Name)
         end
+    end
+
+    -- Fallback: check attributes for EggName/OBJECT_TYPE etc.
+    if not info.content then
+        local attrNames = {"EggName", "EGG_NAME", "eggname", "OBJECT_TYPE", "OBJECT_TYPE", "Type", "PetType", "PET_TYPE"}
+        for _, an in ipairs(attrNames) do
+            local ok, v = pcall(function() return egg:GetAttribute(an) end)
+            if ok and v and tostring(v) ~= "" then
+                info.content = tostring(v)
+                break
+            end
+        end
+    end
+
+    -- Fallback: look for a child Model with a descriptive name (e.g. "Common Egg")
+    if not info.content then
+        for _, child in pairs(egg:GetChildren()) do
+            if child:IsA("Model") and child.Name and not child.Name:lower():find("egg") then
+                info.content = tostring(child.Name)
+                break
+            end
+        end
+    end
     end
 
     -- Store safe custom properties from egg

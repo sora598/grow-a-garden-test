@@ -559,10 +559,16 @@ local function ShowEggESP(egg, player, api)
         if owner and owner ~= player.Name then return end
 
         -- Try discover content and timer
-        local content = Utils.getAttributeSafe(egg, "Content") or Utils.getAttributeSafe(egg, "CONTENT") or Utils.getAttributeSafe(egg, "Type") or Utils.getAttributeSafe(egg, "PET_TYPE")
+        local content = Utils.getAttributeSafe(egg, "Content") or Utils.getAttributeSafe(egg, "CONTENT") or Utils.getAttributeSafe(egg, "Type") or Utils.getAttributeSafe(egg, "PET_TYPE") or Utils.getAttributeSafe(egg, "EggName") or Utils.getAttributeSafe(egg, "OBJECT_TYPE")
         if not content then
-            local child = egg:FindFirstChild("Content") or egg:FindFirstChild("content") or egg:FindFirstChild("Type") or egg:FindFirstChild("PET_TYPE")
-            if child and child:IsA("StringValue") then content = child.Value end
+            local child = egg:FindFirstChild("Content") or egg:FindFirstChild("content") or egg:FindFirstChild("Type") or egg:FindFirstChild("PET_TYPE") or egg:FindFirstChild("EggName")
+            if child then
+                if child:IsA("StringValue") then
+                    content = child.Value
+                elseif child:IsA("Model") or child:IsA("Folder") then
+                    content = child.Name
+                end
+            end
         end
 
         local timer = Utils.getAttributeSafe(egg, "TimeToHatch") or Utils.getAttributeSafe(egg, "TimeToReady") or Utils.getAttributeSafe(egg, "TIME_TO_READY") or Utils.getAttributeSafe(egg, "TimeToPatch")
@@ -579,6 +585,11 @@ local function ShowEggESP(egg, player, api)
         elseif type(timer) == "number" then
             labelText = string.format("⏳ %ds%s", math.ceil(timer), content and (" | " .. tostring(content)) or "")
         else
+            -- If content still nil, try child model name
+            if not content then
+                local c = egg:FindFirstChildWhichIsA("Model") or egg:FindFirstChildWhichIsA("Folder")
+                if c and c.Name and not c.Name:lower():find("egg") then content = c.Name end
+            end
             labelText = content and tostring(content) or tostring(egg.Name or "Egg")
         end
 
