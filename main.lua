@@ -745,10 +745,24 @@ local function buildGUI()
     local sg = Instance.new("ScreenGui")
     sg.Name = "GrowAGardenMain"
     sg.ResetOnSpawn = false
-    pcall(function() 
-        local safeGetHui = (type(gethui) == "function" and pcall(gethui)) and gethui() or nil
-        sg.Parent = player.PlayerGui or safeGetHui or game.CoreGui 
-    end)
+    
+    -- Safe parent assignment with fallback chain
+    local function getParent()
+        if player.PlayerGui then 
+            return player.PlayerGui 
+        end
+        
+        if type(gethui) == "function" then
+            local success, result = pcall(gethui)
+            if success and result then 
+                return result 
+            end
+        end
+        
+        return game:GetService("CoreGui")
+    end
+    
+    sg.Parent = getParent()
     
     local main = Instance.new("Frame")
     main.Size = UDim2.new(0, 280, 0, 320)
