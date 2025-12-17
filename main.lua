@@ -96,55 +96,58 @@ end
 -- ========== DATA ACCESS FUNCTIONS ==========
 local DataAccess = {}
 
--- Access saved game data
+-- Access saved game data using ReplicatedStorage Modules
 function DataAccess.getSavedData()
     local success, result = pcall(function()
-        -- Try to access player's replicated data
+        -- Try to require the DataService module from ReplicatedStorage
         local ReplicatedStorage = game:GetService("ReplicatedStorage")
-        local playerData = ReplicatedStorage:FindFirstChild("PlayerData")
-        if playerData then
-            local myData = playerData:FindFirstChild(player.Name)
-            if myData and myData:FindFirstChild("SaveSlots") then
-                local saveSlots = myData.SaveSlots
-                local selectedSlot = saveSlots:FindFirstChild("SelectedSlot")
-                if selectedSlot and selectedSlot.Value then
-                    local allSlots = saveSlots:FindFirstChild("AllSlots")
-                    if allSlots then
-                        local slot = allSlots:FindFirstChild(tostring(selectedSlot.Value))
-                        if slot and slot:FindFirstChild("SavedObjects") then
-                            return slot.SavedObjects:GetChildren()
-                        end
-                    end
-                end
-            end
-        end
-        return nil
+        local modules = ReplicatedStorage:FindFirstChild("Modules")
+        if not modules then return nil end
+        
+        local dataService = modules:FindFirstChild("DataService")
+        if not dataService then return nil end
+        
+        -- Require the module and get data
+        local dataModule = require(dataService)
+        local playerData = dataModule:GetData()
+        if not playerData then return nil end
+        
+        -- Navigate to SavedObjects
+        local saveSlots = playerData.SaveSlots
+        if not saveSlots then return nil end
+        
+        local selectedSlot = saveSlots.SelectedSlot
+        if not selectedSlot then return nil end
+        
+        local allSlots = saveSlots.AllSlots
+        if not allSlots then return nil end
+        
+        local slotData = allSlots[selectedSlot]
+        if not slotData then return nil end
+        
+        return slotData.SavedObjects
     end)
+    
     return success and result or nil
 end
 
--- Get egg data by UUID
+-- Get egg data by UUID from saved objects
 function DataAccess.getEggDataByUUID(uuid)
     if not uuid or uuid == "" then return nil end
     
     local savedData = DataAccess.getSavedData()
     if not savedData then return nil end
     
-    for _, obj in ipairs(savedData) do
-        if obj.Name == uuid and obj:FindFirstChild("Data") then
-            local data = obj.Data
-            local petType = data:FindFirstChild("Type")
-            local baseWeight = data:FindFirstChild("BaseWeight")
-            
-            if petType and baseWeight then
-                return {
-                    Type = petType.Value,
-                    BaseWeight = baseWeight.Value
-                }
-            end
-        end
-    end
-    return nil
+    -- SavedObjects is a table indexed by UUID
+    local eggData = savedData[uuid]
+    if not eggData or not eggData.Data then return nil end
+    
+    local data = eggData.Data
+    return {
+        Type = data.Type or "Unknown",
+        BaseWeight = data.BaseWeight or 1,
+        EggName = data.EggName or "Unknown Egg"
+    }
 end
 
 -- Calculate current weight based on base weight and level
