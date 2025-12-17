@@ -256,7 +256,7 @@ function EggSystem.getEggInfo(egg)
     end
 
     -- Try to find content/type (search descendants on egg then parent)
-    local contentNames = {"Content", "content", "Type", "type", "EggType", "ItemType"}
+    local contentNames = {"Content", "content", "Type", "type", "EggType", "ItemType", "Plant", "Pet", "PetType", "Breed", "Contents", "Value", "Name"}
     local content = _findDescendantByNames(egg, contentNames, 4)
     if not content and egg.Parent then
         content = _findDescendantByNames(egg.Parent, contentNames, 3)
@@ -270,6 +270,11 @@ function EggSystem.getEggInfo(egg)
         elseif content:IsA("TextLabel") or content:IsA("TextBox") then
             local ok, v = pcall(function() return content.Text end)
             if ok then info.content = v end
+        elseif content:IsA("ObjectValue") or content:IsA("Instance") then
+            local ok, val = pcall(function() return content.Value end)
+            if ok and val then
+                info.content = tostring((type(val) == "table" and val.Name) or (typeof(val) == "Instance" and val.Name) or tostring(val))
+            end
         end
     end
 
@@ -454,8 +459,25 @@ local function _updateESPForEgg(egg)
                 label.TextColor3 = EggESP.TIMER_COLOR
             end
         else
-            label.Text = info and (info.content and tostring(info.content) or "...") or "..."
-            label.TextColor3 = EggESP.TIMER_COLOR
+            local ok2, info = pcall(function() return EggSystem.getEggInfo(egg) end)
+            if ok2 and info then
+                local contentText = info.content and tostring(info.content) or nil
+                if info.timerValue and type(info.timerValue) == "number" then
+                    if info.timerValue <= 0 then
+                        label.Text = contentText and ("READY: " .. contentText) or "READY"
+                        label.TextColor3 = EggESP.READY_COLOR
+                    else
+                        label.Text = contentText and (string.format("⏳ %ds | %s", math.ceil(info.timerValue), contentText)) or string.format("⏳ %ds", math.ceil(info.timerValue))
+                        label.TextColor3 = EggESP.TIMER_COLOR
+                    end
+                else
+                    label.Text = contentText or "..."
+                    label.TextColor3 = EggESP.TIMER_COLOR
+                end
+            else
+                label.Text = "..."
+                label.TextColor3 = EggESP.TIMER_COLOR
+            end
         end
     end
 end
