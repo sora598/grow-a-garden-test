@@ -17,44 +17,99 @@ grow-a-garden-test/
 
 ## 🚀 Quick Start
 
-### For Mobile Executors
+### Method 1: Direct GitHub LoadString (Public Repo Only)
 
-1. **Copy files to your executor's workspace:**
-   - `src/Grow_a_Garden.deobf.lua`
-   - `tests/mobile_test.lua`
+If your repository is **public**, use direct URLs:
 
-2. **Run verification test:**
-   ```lua
-   loadstring(readfile("mobile_test.lua"))()
-   ```
+```lua
+-- Load main module
+local Deobf = loadstring(game:HttpGet("https://raw.githubusercontent.com/sora598/grow-a-garden-test/main/src/Grow_a_Garden.deobf.lua"))()
 
-3. **Use in your script:**
-   ```lua
-   local Deobf = loadstring(readfile("Grow_a_Garden.deobf.lua"))()
-   
-   local config = {
-       LuckBase = 0.10,           -- 10% base luck
-       LuckBoostPercent = 50,      -- +50% boost → 15% total
-       ["Auto Collect Fruits"] = true,
-       -- ... other settings
-   }
-   
-   -- Attach your game's remotes
-   Deobf.attachRemotes({
-       Crops = { Collect = game.ReplicatedStorage.Remotes.Crops.Collect },
-       -- ... other remotes
-   })
-   
-   -- Run main loop
-   local helpers = {
-       InventoryChecker = Deobf.InventoryChecker.new(game.Players.LocalPlayer)
-   }
-   
-   while true do
-       Deobf.runCycle(game.Players.LocalPlayer, config, {}, helpers)
-       task.wait(1)
-   end
-   ```
+-- Quick test
+loadstring(game:HttpGet("https://raw.githubusercontent.com/sora598/grow-a-garden-test/main/tests/mobile_test.lua"))()
+```
+
+### Method 2: Private Repository with Token
+
+For **private repos**, create a Personal Access Token (PAT):
+
+1. Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
+2. Generate new token with `repo` scope
+3. Use in URL:
+
+```lua
+local token = "ghp_your_token_here"
+local url = "https://raw.githubusercontent.com/sora598/grow-a-garden-test/main/src/Grow_a_Garden.deobf.lua"
+local headers = {["Authorization"] = "token " .. token}
+
+-- Most executors don't support custom headers, so use this workaround:
+local Deobf = loadstring(game:HttpGet("https://" .. token .. "@raw.githubusercontent.com/sora598/grow-a-garden-test/main/src/Grow_a_Garden.deobf.lua"))()
+```
+
+⚠️ **Security Warning:** Tokens in scripts can be stolen. Use Method 3 for private repos.
+
+### Method 3: Local Files (Recommended for Private Repos)
+
+Download files to your executor's workspace, then:
+
+```lua
+-- Load from local files
+local Deobf = loadstring(readfile("src/Grow_a_Garden.deobf.lua"))()
+
+-- Run test
+loadstring(readfile("tests/mobile_test.lua"))()
+```
+
+### Method 4: Pastebin Alternative
+
+Upload to Pastebin (set to unlisted/private):
+
+```lua
+local Deobf = loadstring(game:HttpGet("https://pastebin.com/raw/YOUR_PASTE_ID"))()
+```
+
+---
+
+## 💻 Full Usage Example
+
+```lua
+-- Load module (choose method above)
+local Deobf = loadstring(readfile("src/Grow_a_Garden.deobf.lua"))()
+
+local config = {
+    LuckBase = 0.10,           -- 10% base luck
+    LuckBoostPercent = 50,      -- +50% boost → 15% total
+    ["Auto Collect Fruits"] = true,
+    ["Delay To Collect"] = 0.05,
+    ["Select Whitlist Fruit"] = {"All"},
+    ["Stop Collect If Backpack Is Full Max"] = true,
+    ["AutoWater Fruitlist"] = true,
+    ["Select Water Fruit"] = {"Tomato", "Wheat"},
+    ["Auto Favorite Backpack"] = true,
+}
+
+-- Attach your game's remotes (find with Remote Spy)
+Deobf.attachRemotes({
+    Crops = { 
+        Collect = game:GetService("ReplicatedStorage").Remotes.Crops.Collect 
+    },
+    Water_RE = game:GetService("ReplicatedStorage").Remotes.Water_RE,
+    Favorite_Item = game:GetService("ReplicatedStorage").Remotes.Favorite_Item,
+    -- ... add other remotes as needed
+})
+
+-- Initialize helpers
+local helpers = {
+    InventoryChecker = Deobf.InventoryChecker.new(game.Players.LocalPlayer),
+    FruitFilter = Deobf.Helpers.FruitFilter,
+}
+
+-- Main loop
+while true do
+    Deobf.runCycle(game.Players.LocalPlayer, config, {}, helpers)
+    task.wait(1)
+end
+```
 
 ## ✨ Features
 
