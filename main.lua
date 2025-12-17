@@ -64,6 +64,32 @@ local State = {
     eggs = {}
 }
 
+-- Simple in-memory console for GUI; use `Log(...)` to record messages
+State.console = {}
+local function _safe_tostring(v)
+    if type(v) == "string" then return v end
+    if type(v) == "table" then return "<table>" end
+    return tostring(v)
+end
+function Log(...)
+    local parts = {}
+    for i = 1, select('#', ...) do
+        parts[#parts+1] = _safe_tostring(select(i, ...))
+    end
+    local line = table.concat(parts, " ")
+    -- store with timestamp
+    local entry = {time = os.date("%X"), text = line}
+    table.insert(State.console, entry)
+    -- limit history
+    if #State.console > 200 then table.remove(State.console, 1) end
+    -- also print to normal console
+    pcall(function() print(string.format("[%s] %s", entry.time, entry.text)) end)
+    -- if GUI present, append there too
+    if GUI and GUI.appendConsole then
+        pcall(function() GUI.appendConsole(entry.time, entry.text) end)
+    end
+end
+
 -- ========== EGG DETECTION & CHECKING ==========
 local EggSystem = {}
 
@@ -848,21 +874,59 @@ local function buildGUI()
     eb.LayoutOrder = 8
     eb.MouseButton1Click:Connect(function()
         local eggReport = EggSystem.checkAllEggs()
-        print(string.format("🔍 Found %d eggs:", #eggReport))
+        Log(string.format("🔍 Found %d eggs:", #eggReport))
         for i, egg in pairs(eggReport) do
-            print(string.format("  [%d] %s | Timer: %s | Content: %s", i, egg.name, tostring(egg.timerValue), egg.content or "N/A"))
+            Log(string.format("  [%d] %s | Timer: %s | Content: %s", i, egg.name, tostring(egg.timerValue), egg.content or "N/A"))
         end
     end)
     
+    -- Console display (in-GUI)
+    local consoleFrame = Instance.new("ScrollingFrame")
+    consoleFrame.Size = UDim2.new(1, 0, 0, 120)
+    consoleFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    consoleFrame.BorderSizePixel = 0
+    consoleFrame.LayoutOrder = 9
+    consoleFrame.Parent = content
+    consoleFrame.ScrollBarThickness = 6
+    Instance.new("UICorner", consoleFrame).CornerRadius = UDim.new(0, 5)
+
+    local consoleLayout = Instance.new("UIListLayout")
+    consoleLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    consoleLayout.Padding = UDim.new(0, 4)
+    consoleLayout.Parent = consoleFrame
+
+    local function appendConsoleLine(timeStr, text)
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.new(1, -10, 0, 18)
+        lbl.BackgroundTransparency = 1
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
+        lbl.TextYAlignment = Enum.TextYAlignment.Center
+        lbl.Font = Enum.Font.Code
+        lbl.TextSize = 12
+        lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+        lbl.Text = string.format("[%s] %s", timeStr or os.date("%X"), text or "")
+        lbl.Parent = consoleFrame
+        consoleFrame.CanvasSize = UDim2.new(0, 0, 0, consoleLayout.AbsoluteContentSize.Y + 8)
+        consoleFrame.CanvasPosition = Vector2.new(0, math.max(0, consoleLayout.AbsoluteContentSize.Y - consoleFrame.AbsoluteSize.Y))
+    end
+
+    -- Populate with existing logs
+    for i = 1, #State.console do
+        local e = State.console[i]
+        pcall(function() appendConsoleLine(e.time, e.text) end)
+    end
+
+    -- Expose append function to GUI variable later
+
     -- Status display
     local sf = Instance.new("Frame")
     sf.Size = UDim2.new(1, 0, 0, 70)
     sf.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     sf.BorderSizePixel = 0
-    sf.LayoutOrder = 9
+    sf.LayoutOrder = 10
     sf.Parent = content
     Instance.new("UICorner", sf).CornerRadius = UDim.new(0, 5)
-    
+
     local sl = Instance.new("TextLabel")
     sl.Size = UDim2.new(1, -12, 1, -6)
     sl.Position = UDim2.new(0, 6, 0, 3)
@@ -953,6 +1017,9 @@ local function buildGUI()
         state = State,
         config = Config,
         eggSystem = EggSystem,
+        appendConsole = appendConsoleLine,
+        consoleFrame = consoleFrame,
+        consoleLayout = consoleLayout,
     }
 end
 
