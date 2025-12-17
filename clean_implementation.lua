@@ -13,13 +13,23 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
+local character = player.Character -- Don't wait for character here
 
 -- ========== REMOTE EVENTS ==========
-local Remotes = ReplicatedStorage:WaitForChild("Events")
+local Remotes = ReplicatedStorage:FindFirstChild("Events") -- Don't block with WaitForChild
 
 -- ========== CORE MODULE (_) ==========
 local _ = {}
+
+-- Helper to get character
+function _.GetCharacter()
+    return player.Character or player.CharacterAdded:Wait()
+end
+
+-- Helper to get remotes safely
+function _.GetRemotes()
+    return Remotes or ReplicatedStorage:WaitForChild("Events", 5)
+end
 
 -- ========== API & DATA ==========
 _.API = {
